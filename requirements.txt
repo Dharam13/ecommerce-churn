@@ -1,0 +1,12 @@
+numpy
+pandas
+SQLAlchemy
+psycopg2-binary
+scikit-learn
+xgboost
+mlflow
+streamlit
+apache-airflow
+matplotlib
+seaborn
+python-dotenv
