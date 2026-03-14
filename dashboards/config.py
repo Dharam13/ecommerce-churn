@@ -1,18 +1,22 @@
 """
 config.py
 ═════════
-Central configuration — database credentials, colour palettes, and constants.
-Edit this single file when credentials or theming change.
+Central configuration — colour palettes, thresholds, and constants.
+DB credentials are loaded from .env via src.db.connection.
 """
 
-# ── Database ───────────────────────────────────────────────
-DB_USER = "postgres"
-DB_PASSWORD = "2271"
-DB_HOST = "localhost"
-DB_PORT = "5432"
-DB_NAME = "churn_db"
+import os
+from pathlib import Path
+from dotenv import load_dotenv
 
-DB_URL = f"postgresql://{DB_USER}:{DB_PASSWORD}@{DB_HOST}:{DB_PORT}/{DB_NAME}"
+# Load .env from the project root (one level up from dashboards/)
+_PROJECT_ROOT = Path(__file__).resolve().parent.parent
+load_dotenv(_PROJECT_ROOT / ".env")
+
+# ── Schema names (from .env) ──────────────────────────────
+BRONZE_SCHEMA = os.getenv("BRONZE_SCHEMA", "bronze")
+SILVER_SCHEMA = os.getenv("SILVER_SCHEMA", "silver")
+GOLD_SCHEMA   = os.getenv("GOLD_SCHEMA",   "gold")
 
 # ── Colour palette ────────────────────────────────────────
 PALETTE = {
@@ -36,7 +40,7 @@ RISK_COLORS = {
 PLOTLY_TEMPLATE = "plotly_dark"
 
 # ── Risk thresholds ────────────────────────────────────────
-HIGH_RISK_THRESHOLD = 0.75
+HIGH_RISK_THRESHOLD  = 0.75
 MEDIUM_RISK_THRESHOLD = 0.50
 
 # ── Cache TTL (seconds) ───────────────────────────────────
