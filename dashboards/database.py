@@ -3,9 +3,9 @@ database.py
 ═══════════
 Database connection (via src.db.connection) and data loading.
 
-Reads from the Gold star schema (fact + dimensions) and enriches with
-columns from Silver that aren't in the Gold layer (e.g. satisfactionscore,
-hourspendonapp, daysincelastorder, etc.).
+Reads from the Gold star schema (fact + dimensions), enriches with
+Silver columns, and merges ML-based churn predictions from
+gold.churn_predictions.
 """
 
 import sys
@@ -36,11 +36,24 @@ def connect_db():
     return get_engine()
 
 
+def _predictions_table_exists(engine) -> bool:
+    """Check if gold.churn_predictions exists and has data."""
+    try:
+        result = pd.read_sql(
+            text(f"SELECT COUNT(*) AS n FROM {GOLD_SCHEMA}.churn_predictions"),
+            engine,
+        )
+        return result.iloc[0, 0] > 0
+    except Exception:
+        return False
+
+
 @st.cache_data(ttl=DATA_CACHE_TTL)
 def load_data() -> pd.DataFrame:
     """
-    Build a rich analytical DataFrame by joining Gold star-schema tables
-    and enriching with Silver-layer columns not present in Gold.
+    Build a rich analytical DataFrame by joining Gold star-schema tables,
+    enriching with Silver-layer columns, and merging ML predictions from
+    gold.churn_predictions.
 
     Gold provides:
         fact_orders  → ordercount, couponused, cashbackamount, churn, complain …
@@ -52,6 +65,9 @@ def load_data() -> pd.DataFrame:
     Silver enrichment (not in Gold fact):
         satisfactionscore, hourspendonapp, numberofdeviceregistered,
         daysincelastorder, preferredpaymentmode, numberofaddress
+
+    ML predictions (gold.churn_predictions):
+        churn_probability, churn_prediction, risk_segment, prediction_time
     """
     engine = connect_db()
 
@@ -100,27 +116,49 @@ def load_data() -> pd.DataFrame:
         FROM {SILVER_SCHEMA}.ecommerce_clean
     """)
     silver_extra = pd.read_sql(silver_query, engine)
-
     df = df.merge(silver_extra, on="customerid", how="left")
 
-    # ── 3. Derived columns ────────────────────────────────────
-    # churn is already boolean/int from fact — ensure int
+    # ── 3. Churn → int ───────────────────────────────────────
     df["churn"] = df["churn"].astype(int)
 
-    # Churn probability placeholder (no ML model yet → use a rule-based proxy)
-    df["churn_probability"] = _estimate_churn_probability(df)
+    # ── 4. ML predictions from gold.churn_predictions ────────
+    if _predictions_table_exists(engine):
+        pred_query = text(f"""
+            SELECT
+                customerid,
+                churn_probability,
+                churn_prediction,
+                risk_segment,
+                prediction_time AS ml_prediction_time
+            FROM {GOLD_SCHEMA}.churn_predictions
+        """)
+        pred_df = pd.read_sql(pred_query, engine)
+        df = df.merge(pred_df, on="customerid", how="left")
 
-    # Risk segment
-    df["risk_segment"] = df["churn_probability"].apply(_compute_segment)
+        # Fill any customers not in predictions table
+        if df["churn_probability"].isna().any():
+            mask = df["churn_probability"].isna()
+            df.loc[mask, "churn_probability"] = _fallback_probability(df.loc[mask])
+            df.loc[mask, "risk_segment"] = df.loc[mask, "churn_probability"].apply(_compute_segment)
+
+        st.sidebar.success("Using ML model predictions")
+    else:
+        # Fallback: rule-based if no ML predictions exist yet
+        df["churn_probability"] = _fallback_probability(df)
+        df["risk_segment"] = df["churn_probability"].apply(_compute_segment)
+        st.sidebar.warning("No ML predictions found — using rule-based fallback.\n\nRun: `python -m src.ml.predict_churn`")
 
     return df
 
 
-def _estimate_churn_probability(df: pd.DataFrame) -> pd.Series:
+# ════════════════════════════════════════════════════════════
+# FALLBACK (only used when gold.churn_predictions is empty)
+# ════════════════════════════════════════════════════════════
+
+def _fallback_probability(df: pd.DataFrame) -> pd.Series:
     """
-    Simple rule-based churn probability until a real ML model is trained.
-    For customers where churn==1 (already churned) → high probability.
-    For others → lower, modulated by complaints, satisfaction, inactivity.
+    Simple rule-based churn probability — ONLY used as fallback
+    when gold.churn_predictions has not been populated yet.
     """
     import numpy as np
 
@@ -130,11 +168,8 @@ def _estimate_churn_probability(df: pd.DataFrame) -> pd.Series:
     prob += (df.get("satisfactionscore", pd.Series(3, index=df.index)) <= 2).astype(float) * 0.20
     prob += (df.get("daysincelastorder", pd.Series(0, index=df.index)) > 30).astype(float) * 0.15
     prob += (df["ordercount"] <= 2).astype(float) * 0.10
-
-    # If they actually churned, nudge up
     prob = prob + df["churn"].astype(float) * 0.15
 
-    # Add slight noise for scatter variety
     rng = np.random.default_rng(42)
     noise = rng.uniform(-0.05, 0.05, size=len(df))
     prob = (prob + noise).clip(0.01, 0.99).round(4)
