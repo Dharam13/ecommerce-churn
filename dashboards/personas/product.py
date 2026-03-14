@@ -9,8 +9,28 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-from config import PALETTE, PLOTLY_TEMPLATE
+from config import PALETTE, CHART_COLORS, PLOTLY_TEMPLATE
 from components import kpi_card, section_header, persona_header
+
+
+def _chart_layout(fig, title="", height=380):
+    """Apply standard professional chart layout."""
+    fig.update_layout(
+        margin=dict(t=45, b=25, l=25, r=25),
+        height=height,
+        font=dict(family="Inter, sans-serif", size=12, color=PALETTE["text_secondary"]),
+        title=dict(
+            text=title,
+            font=dict(size=14, color=PALETTE["text"], family="Inter"),
+            x=0.02, y=0.97,
+        ) if title else {},
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(font=dict(size=11), bgcolor="rgba(0,0,0,0)"),
+        xaxis=dict(gridcolor="#F3F4F6", zerolinecolor="#E5E7EB"),
+        yaxis=dict(gridcolor="#F3F4F6", zerolinecolor="#E5E7EB"),
+    )
+    return fig
 
 
 def render_product_dashboard(df: pd.DataFrame):
@@ -69,20 +89,15 @@ def render_product_dashboard(df: pd.DataFrame):
             login_df.columns = ["device", "count"]
             fig = px.pie(
                 login_df, names="device", values="count",
-                title="Login Device Distribution",
-                hole=0.48,
+                hole=0.52,
                 template=PLOTLY_TEMPLATE,
-                color_discrete_sequence=[
-                    PALETTE["primary"], PALETTE["accent"], PALETTE["info"],
-                    PALETTE["warning"], PALETTE["secondary"],
-                ],
+                color_discrete_sequence=CHART_COLORS,
             )
-            fig.update_traces(textinfo="percent+label", textfont_size=12)
-            fig.update_layout(
-                margin=dict(t=50, b=20, l=20, r=20), height=380,
-                font=dict(family="Inter"),
-                title_font=dict(size=15, color=PALETTE["text"]),
+            fig.update_traces(
+                textinfo="percent+label", textfont_size=11,
+                marker=dict(line=dict(color="#FFFFFF", width=2)),
             )
+            fig = _chart_layout(fig, title="Login Device Distribution", height=380)
             st.plotly_chart(fig, use_container_width=True)
 
     with c2:
@@ -95,15 +110,12 @@ def render_product_dashboard(df: pd.DataFrame):
             )
             fig = px.bar(
                 dev_churn, x="numberofdeviceregistered", y="churn_rate",
-                title="Devices Registered vs Churn Rate",
                 template=PLOTLY_TEMPLATE,
                 color_discrete_sequence=[PALETTE["primary"]],
             )
+            fig = _chart_layout(fig, title="Devices Registered vs Churn Rate", height=380)
             fig.update_layout(
-                margin=dict(t=50, b=20, l=20, r=20), height=380,
                 xaxis_title="Devices Registered", yaxis_title="Churn Rate",
-                font=dict(family="Inter"),
-                title_font=dict(size=15, color=PALETTE["text"]),
             )
             fig.update_traces(marker_cornerradius=6)
             st.plotly_chart(fig, use_container_width=True)
@@ -115,16 +127,13 @@ def render_product_dashboard(df: pd.DataFrame):
         if "hourspendonapp" in df.columns:
             fig = px.histogram(
                 df, x="hourspendonapp", nbins=25,
-                title="Hours Spent on App",
                 template=PLOTLY_TEMPLATE,
                 color_discrete_sequence=[PALETTE["info"]],
             )
+            fig = _chart_layout(fig, title="Hours Spent on App", height=380)
             fig.update_layout(
-                margin=dict(t=50, b=20, l=20, r=20), height=380,
                 xaxis_title="Hours", yaxis_title="Count",
                 bargap=0.05,
-                font=dict(family="Inter"),
-                title_font=dict(size=15, color=PALETTE["text"]),
             )
             fig.update_traces(marker_cornerradius=4)
             st.plotly_chart(fig, use_container_width=True)
@@ -135,16 +144,11 @@ def render_product_dashboard(df: pd.DataFrame):
             cat_df.columns = ["category", "count"]
             fig = px.bar(
                 cat_df, x="category", y="count",
-                title="Category Preference",
                 template=PLOTLY_TEMPLATE,
                 color_discrete_sequence=[PALETTE["accent"]],
             )
-            fig.update_layout(
-                margin=dict(t=50, b=20, l=20, r=20), height=380,
-                xaxis_title="", yaxis_title="Count",
-                font=dict(family="Inter"),
-                title_font=dict(size=15, color=PALETTE["text"]),
-            )
+            fig = _chart_layout(fig, title="Category Preference", height=380)
+            fig.update_layout(xaxis_title="", yaxis_title="Count")
             fig.update_traces(marker_cornerradius=6)
             st.plotly_chart(fig, use_container_width=True)
 
@@ -154,18 +158,13 @@ def render_product_dashboard(df: pd.DataFrame):
         pay_df.columns = ["mode", "count"]
         fig = px.pie(
             pay_df, names="mode", values="count",
-            title="Payment Mode Distribution",
-            hole=0.48,
+            hole=0.52,
             template=PLOTLY_TEMPLATE,
-            color_discrete_sequence=[
-                PALETTE["primary"], PALETTE["info"], PALETTE["accent"],
-                PALETTE["warning"], PALETTE["secondary"],
-            ],
+            color_discrete_sequence=CHART_COLORS,
         )
-        fig.update_traces(textinfo="percent+label", textfont_size=12)
-        fig.update_layout(
-            margin=dict(t=50, b=20, l=20, r=20), height=400,
-            font=dict(family="Inter"),
-            title_font=dict(size=15, color=PALETTE["text"]),
+        fig.update_traces(
+            textinfo="percent+label", textfont_size=11,
+            marker=dict(line=dict(color="#FFFFFF", width=2)),
         )
+        fig = _chart_layout(fig, title="Payment Mode Distribution", height=400)
         st.plotly_chart(fig, use_container_width=True)

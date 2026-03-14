@@ -34,11 +34,12 @@ _ORDER_CATS = ["Laptop & Accessory", "Mobile Phone", "Fashion", "Grocery", "Othe
 
 def _risk_badge(segment: str) -> str:
     """Return a styled badge HTML for a risk segment."""
-    color = RISK_COLORS.get(segment, "#64748B")
-    bg = RISK_BG_COLORS.get(segment, "#F1F5F9")
+    color = RISK_COLORS.get(segment, "#6B7280")
+    bg = RISK_BG_COLORS.get(segment, "#F3F4F6")
     return (
-        f'<span style="background:{bg};color:{color};padding:4px 12px;'
-        f'border-radius:100px;font-size:0.82rem;font-weight:600;">{segment}</span>'
+        f'<span style="background:{bg};color:{color};padding:4px 14px;'
+        f'border-radius:100px;font-size:0.75rem;font-weight:700;'
+        f'letter-spacing:0.3px;">{segment}</span>'
     )
 
 
@@ -55,31 +56,31 @@ def _prediction_card(title: str, prediction: dict, accent: str):
     prob_pct = prob * 100
     bar_color = RISK_COLORS.get(seg, PALETTE["primary"])
 
-    st.markdown(f"""
-    <div style="
-        background:{PALETTE['card_bg']};
-        border:1px solid {PALETTE['card_border']};
-        border-left:4px solid {accent};
-        border-radius:12px;
-        padding:1.25rem 1.5rem;
-        box-shadow:0 1px 3px rgba(0,0,0,0.04);
-    ">
-        <div style="color:{PALETTE['text_muted']};font-size:0.72rem;font-weight:600;
-             text-transform:uppercase;letter-spacing:0.8px;margin-bottom:0.5rem;">
-            {title}
-        </div>
-        <div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.75rem;">
-            <span style="font-size:1.75rem;font-weight:700;color:{PALETTE['text']};">
-                {prob_pct:.1f}%
-            </span>
-            {badge}
-        </div>
-        <div style="background:{PALETTE['card_border']};border-radius:4px;height:8px;overflow:hidden;">
-            <div style="width:{prob_pct}%;height:100%;background:{bar_color};
-                 border-radius:4px;transition:width 0.3s ease;"></div>
-        </div>
-    </div>
-    """, unsafe_allow_html=True)
+    card_style = (
+        f"background:{PALETTE['card_bg']};"
+        f"border:1px solid {PALETTE['card_border']};"
+        f"border-left:4px solid {accent};"
+        f"border-radius:10px;"
+        f"padding:1.25rem 1.5rem;"
+        f"box-shadow:0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);"
+    )
+    label_style = (
+        f"color:{PALETTE['text_muted']};font-size:0.68rem;font-weight:700;"
+        f"text-transform:uppercase;letter-spacing:0.8px;margin-bottom:0.5rem;"
+    )
+    html = (
+        f'<div style="{card_style}">'
+        f'<div style="{label_style}">{title}</div>'
+        f'<div style="display:flex;align-items:center;gap:1rem;margin-bottom:0.75rem;">'
+        f'<span style="font-size:1.75rem;font-weight:800;color:{PALETTE["text"]};letter-spacing:-0.5px;">{prob_pct:.1f}%</span>'
+        f'{badge}'
+        f'</div>'
+        f'<div style="background:{PALETTE["card_border"]};border-radius:6px;height:8px;overflow:hidden;">'
+        f'<div style="width:{prob_pct}%;height:100%;background:{bar_color};border-radius:6px;transition:width 0.4s ease;"></div>'
+        f'</div>'
+        f'</div>'
+    )
+    st.markdown(html, unsafe_allow_html=True)
 
 
 def render_simulation_dashboard(df: pd.DataFrame):
@@ -163,20 +164,20 @@ def render_simulation_dashboard(df: pd.DataFrame):
                 delta = after_p["churn_probability"] - before_p["churn_probability"]
                 if delta < -0.05:
                     st.markdown(
-                        f"<p style='color:{PALETTE['accent']};font-weight:600;margin-top:1rem;'>"
-                        f"Churn risk decreased by {abs(delta)*100:.1f}pp after the activity update.</p>",
+                        f"<p style='color:{PALETTE['accent']};font-weight:700;margin-top:1rem;'>"
+                        f"✓ Churn risk decreased by {abs(delta)*100:.1f}pp after the activity update.</p>",
                         unsafe_allow_html=True,
                     )
                 elif delta > 0.05:
                     st.markdown(
-                        f"<p style='color:{PALETTE['secondary']};font-weight:600;margin-top:1rem;'>"
-                        f"Churn risk increased by {delta*100:.1f}pp — this customer may need attention.</p>",
+                        f"<p style='color:{PALETTE['secondary']};font-weight:700;margin-top:1rem;'>"
+                        f"⚠ Churn risk increased by {delta*100:.1f}pp — this customer may need attention.</p>",
                         unsafe_allow_html=True,
                     )
                 else:
                     st.markdown(
                         f"<p style='color:{PALETTE['text_muted']};font-weight:600;margin-top:1rem;'>"
-                        f"Churn risk remained stable (delta: {delta*100:+.1f}pp).</p>",
+                        f"― Churn risk remained stable (delta: {delta*100:+.1f}pp).</p>",
                         unsafe_allow_html=True,
                     )
 
@@ -328,7 +329,8 @@ def render_simulation_dashboard(df: pd.DataFrame):
                 badge = _risk_badge(risk_seg)
                 st.markdown(
                     f"<div style='display:flex;align-items:center;gap:0.75rem;'>"
-                    f"<span style='color:{PALETTE['text_muted']};font-size:0.82rem;'>Churn: <b>{churn_prob*100:.1f}%</b></span>"
+                    f"<span style='color:{PALETTE['text_muted']};font-size:0.82rem;'>"
+                    f"Churn: <b>{churn_prob*100:.1f}%</b></span>"
                     f"{badge}</div>",
                     unsafe_allow_html=True,
                 )
@@ -372,25 +374,22 @@ def render_simulation_dashboard(df: pd.DataFrame):
                         border_color = RISK_COLORS["Low Risk"]
                         msg_label = "APPRECIATION MESSAGE"
 
-                    st.markdown(f"""
-                    <div style="
-                        background:{PALETTE['card_bg']};
-                        border:1px solid {PALETTE['card_border']};
-                        border-left:5px solid {border_color};
-                        border-radius:12px;
-                        padding:1.5rem 1.75rem;
-                        margin-top:1rem;
-                        box-shadow:0 2px 8px rgba(0,0,0,0.06);
-                    ">
-                        <div style="color:{border_color};font-size:0.68rem;font-weight:700;
-                             text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.75rem;">
-                            {msg_label}
-                        </div>
-                        <div style="color:{PALETTE['text']};font-size:0.92rem;line-height:1.7;">
-                            {message}
-                        </div>
-                    </div>
-                    """, unsafe_allow_html=True)
+                    msg_card_style = (
+                        f"background:{PALETTE['card_bg']};"
+                        f"border:1px solid {PALETTE['card_border']};"
+                        f"border-left:5px solid {border_color};"
+                        f"border-radius:10px;"
+                        f"padding:1.5rem 1.75rem;"
+                        f"margin-top:1rem;"
+                        f"box-shadow:0 1px 3px rgba(0,0,0,0.06), 0 1px 2px rgba(0,0,0,0.04);"
+                    )
+                    msg_html = (
+                        f'<div style="{msg_card_style}">'
+                        f'<div style="color:{border_color};font-size:0.65rem;font-weight:800;text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.75rem;">{msg_label}</div>'
+                        f'<div style="color:{PALETTE["text_secondary"]};font-size:0.9rem;line-height:1.7;">{message}</div>'
+                        f'</div>'
+                    )
+                    st.markdown(msg_html, unsafe_allow_html=True)
                 else:
                     st.error("Failed to generate message. Check your GEMINI_API_KEY in .env")
 
@@ -495,4 +494,3 @@ Start directly with the message content.
     except Exception as e:
         st.error(f"Gemini API error: {e}")
         return None
-

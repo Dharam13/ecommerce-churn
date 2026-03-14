@@ -9,8 +9,31 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-from config import PALETTE, RISK_COLORS, PLOTLY_TEMPLATE
+from config import PALETTE, RISK_COLORS, CHART_COLORS, PLOTLY_TEMPLATE
 from components import kpi_card, section_header, styled_dataframe, persona_header
+
+
+def _chart_layout(fig, title="", height=380):
+    """Apply standard professional chart layout."""
+    fig.update_layout(
+        margin=dict(t=45, b=25, l=25, r=25),
+        height=height,
+        font=dict(family="Inter, sans-serif", size=12, color=PALETTE["text_secondary"]),
+        title=dict(
+            text=title,
+            font=dict(size=14, color=PALETTE["text"], family="Inter"),
+            x=0.02, y=0.97,
+        ) if title else {},
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(
+            font=dict(size=11),
+            bgcolor="rgba(0,0,0,0)",
+        ),
+        xaxis=dict(gridcolor="#F3F4F6", zerolinecolor="#E5E7EB"),
+        yaxis=dict(gridcolor="#F3F4F6", zerolinecolor="#E5E7EB"),
+    )
+    return fig
 
 
 def render_marketing_dashboard(df: pd.DataFrame):
@@ -68,17 +91,15 @@ def render_marketing_dashboard(df: pd.DataFrame):
                 "Retained": PALETTE["accent"],
                 "Churned": PALETTE["secondary"],
             },
-            title="Churn Distribution",
-            hole=0.48,
+            hole=0.52,
             template=PLOTLY_TEMPLATE,
         )
-        fig.update_traces(textinfo="percent+label", pull=[0.02, 0.05],
-                          textfont_size=13)
-        fig.update_layout(
-            margin=dict(t=50, b=20, l=20, r=20), height=380,
-            font=dict(family="Inter"),
-            title_font=dict(size=15, color=PALETTE["text"]),
+        fig.update_traces(
+            textinfo="percent+label", pull=[0.02, 0.04],
+            textfont_size=12,
+            marker=dict(line=dict(color="#FFFFFF", width=2)),
         )
+        fig = _chart_layout(fig, title="Churn Distribution", height=380)
         st.plotly_chart(fig, use_container_width=True)
 
     with c2:
@@ -91,16 +112,10 @@ def render_marketing_dashboard(df: pd.DataFrame):
                 "Retained": PALETTE["accent"],
                 "Churned": PALETTE["secondary"],
             },
-            title="Orders vs Churn",
             template=PLOTLY_TEMPLATE,
         )
-        fig.update_layout(
-            margin=dict(t=50, b=20, l=20, r=20), height=380,
-            showlegend=False,
-            xaxis_title="", yaxis_title="Order Count",
-            font=dict(family="Inter"),
-            title_font=dict(size=15, color=PALETTE["text"]),
-        )
+        fig = _chart_layout(fig, title="Orders vs Churn", height=380)
+        fig.update_layout(showlegend=False, xaxis_title="", yaxis_title="Order Count")
         st.plotly_chart(fig, use_container_width=True)
 
     # ── Row 2 ────────────────────────────────────────────────
@@ -118,16 +133,11 @@ def render_marketing_dashboard(df: pd.DataFrame):
                 "Retained": PALETTE["accent"],
                 "Churned": PALETTE["secondary"],
             },
-            title="Cashback vs Churn Probability",
-            opacity=0.6,
+            opacity=0.55,
             template=PLOTLY_TEMPLATE,
         )
-        fig.update_layout(
-            margin=dict(t=50, b=20, l=20, r=20), height=380,
-            xaxis_title="Cashback Amount", yaxis_title="Churn Probability",
-            font=dict(family="Inter"),
-            title_font=dict(size=15, color=PALETTE["text"]),
-        )
+        fig = _chart_layout(fig, title="Cashback vs Churn Probability", height=380)
+        fig.update_layout(xaxis_title="Cashback Amount", yaxis_title="Churn Probability")
         st.plotly_chart(fig, use_container_width=True)
 
     with c4:
@@ -139,16 +149,11 @@ def render_marketing_dashboard(df: pd.DataFrame):
         )
         fig = px.bar(
             coupon_df, x="couponused", y="churn_rate",
-            title="Coupon Usage vs Churn Rate",
             template=PLOTLY_TEMPLATE,
             color_discrete_sequence=[PALETTE["primary"]],
         )
-        fig.update_layout(
-            margin=dict(t=50, b=20, l=20, r=20), height=380,
-            xaxis_title="Coupons Used", yaxis_title="Churn Rate",
-            font=dict(family="Inter"),
-            title_font=dict(size=15, color=PALETTE["text"]),
-        )
+        fig = _chart_layout(fig, title="Coupon Usage vs Churn Rate", height=380)
+        fig.update_layout(xaxis_title="Coupons Used", yaxis_title="Churn Rate")
         fig.update_traces(marker_cornerradius=6)
         st.plotly_chart(fig, use_container_width=True)
 
@@ -159,15 +164,12 @@ def render_marketing_dashboard(df: pd.DataFrame):
         seg_df, x="risk_segment", y="count",
         color="risk_segment",
         color_discrete_map=RISK_COLORS,
-        title="Churn Risk Segmentation",
         template=PLOTLY_TEMPLATE,
     )
+    fig = _chart_layout(fig, title="Churn Risk Segmentation", height=380)
     fig.update_layout(
-        margin=dict(t=50, b=20, l=20, r=20), height=380,
         showlegend=False,
         xaxis_title="Risk Segment", yaxis_title="Customer Count",
-        font=dict(family="Inter"),
-        title_font=dict(size=15, color=PALETTE["text"]),
     )
     fig.update_traces(marker_cornerradius=6)
     st.plotly_chart(fig, use_container_width=True)

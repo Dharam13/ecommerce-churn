@@ -13,6 +13,26 @@ from config import PALETTE, PLOTLY_TEMPLATE
 from components import kpi_card, section_header, styled_dataframe, persona_header
 
 
+def _chart_layout(fig, title="", height=380):
+    """Apply standard professional chart layout."""
+    fig.update_layout(
+        margin=dict(t=45, b=25, l=25, r=25),
+        height=height,
+        font=dict(family="Inter, sans-serif", size=12, color=PALETTE["text_secondary"]),
+        title=dict(
+            text=title,
+            font=dict(size=14, color=PALETTE["text"], family="Inter"),
+            x=0.02, y=0.97,
+        ) if title else {},
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(font=dict(size=11), bgcolor="rgba(0,0,0,0)"),
+        xaxis=dict(gridcolor="#F3F4F6", zerolinecolor="#E5E7EB"),
+        yaxis=dict(gridcolor="#F3F4F6", zerolinecolor="#E5E7EB"),
+    )
+    return fig
+
+
 def render_support_dashboard(df: pd.DataFrame):
     """Render the Customer Success / Support persona view."""
 
@@ -69,16 +89,10 @@ def render_support_dashboard(df: pd.DataFrame):
                 "No Complaint": PALETTE["accent"],
                 "Complaint": PALETTE["secondary"],
             },
-            title="Complaints vs Churn Rate",
             template=PLOTLY_TEMPLATE,
         )
-        fig.update_layout(
-            margin=dict(t=50, b=20, l=20, r=20), height=380,
-            showlegend=False,
-            xaxis_title="", yaxis_title="Churn Rate",
-            font=dict(family="Inter"),
-            title_font=dict(size=15, color=PALETTE["text"]),
-        )
+        fig = _chart_layout(fig, title="Complaints vs Churn Rate", height=380)
+        fig.update_layout(showlegend=False, xaxis_title="", yaxis_title="Churn Rate")
         fig.update_traces(marker_cornerradius=6)
         st.plotly_chart(fig, use_container_width=True)
 
@@ -86,16 +100,13 @@ def render_support_dashboard(df: pd.DataFrame):
         if "satisfactionscore" in df.columns:
             fig = px.histogram(
                 df, x="satisfactionscore", nbins=5,
-                title="Satisfaction Score Distribution",
                 template=PLOTLY_TEMPLATE,
                 color_discrete_sequence=[PALETTE["info"]],
             )
+            fig = _chart_layout(fig, title="Satisfaction Score Distribution", height=380)
             fig.update_layout(
-                margin=dict(t=50, b=20, l=20, r=20), height=380,
                 xaxis_title="Satisfaction Score", yaxis_title="Count",
                 bargap=0.15,
-                font=dict(family="Inter"),
-                title_font=dict(size=15, color=PALETTE["text"]),
             )
             fig.update_traces(marker_cornerradius=6)
             st.plotly_chart(fig, use_container_width=True)
@@ -114,15 +125,12 @@ def render_support_dashboard(df: pd.DataFrame):
                     "Retained": PALETTE["accent"],
                     "Churned": PALETTE["secondary"],
                 },
-                title="Satisfaction vs Churn",
                 template=PLOTLY_TEMPLATE,
             )
+            fig = _chart_layout(fig, title="Satisfaction vs Churn", height=380)
             fig.update_layout(
-                margin=dict(t=50, b=20, l=20, r=20), height=380,
                 showlegend=False,
                 xaxis_title="", yaxis_title="Satisfaction Score",
-                font=dict(family="Inter"),
-                title_font=dict(size=15, color=PALETTE["text"]),
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -130,16 +138,13 @@ def render_support_dashboard(df: pd.DataFrame):
         if "daysincelastorder" in df.columns:
             fig = px.histogram(
                 df, x="daysincelastorder", nbins=30,
-                title="Days Since Last Order",
                 template=PLOTLY_TEMPLATE,
                 color_discrete_sequence=[PALETTE["warning"]],
             )
+            fig = _chart_layout(fig, title="Days Since Last Order", height=380)
             fig.update_layout(
-                margin=dict(t=50, b=20, l=20, r=20), height=380,
                 xaxis_title="Days Since Last Order", yaxis_title="Count",
                 bargap=0.05,
-                font=dict(family="Inter"),
-                title_font=dict(size=15, color=PALETTE["text"]),
             )
             fig.update_traces(marker_cornerradius=4)
             st.plotly_chart(fig, use_container_width=True)

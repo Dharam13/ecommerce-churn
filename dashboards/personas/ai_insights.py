@@ -11,7 +11,7 @@ import streamlit as st
 import plotly.express as px
 import plotly.graph_objects as go
 
-from config import PALETTE, RISK_COLORS, PLOTLY_TEMPLATE
+from config import PALETTE, RISK_COLORS, CHART_COLORS, PLOTLY_TEMPLATE
 from components import section_header
 
 # Lazy-initialised chatbot (cached so it survives reruns)
@@ -35,45 +35,45 @@ def _inject_chat_css():
         /* ── Chat wrapper — the outer card ──────────────── */
         .chatbox-wrapper {
             background: #FFFFFF;
-            border: 1px solid #E2E8F0;
-            border-radius: 16px;
+            border: 1px solid #E5E7EB;
+            border-radius: 12px;
             box-shadow: 0 4px 24px rgba(0, 0, 0, 0.06),
-                        0 1px 4px rgba(0, 0, 0, 0.04);
+                        0 1px 4px rgba(0, 0, 0, 0.03);
             overflow: hidden;
             margin: 0.5rem 0 1rem;
         }
 
         /* ── Header bar ────────────────────────────────── */
         .chat-header {
-            background: linear-gradient(135deg, #4F46E5, #7C3AED);
-            padding: 1rem 1.5rem;
+            background: linear-gradient(135deg, #2563EB, #7C3AED);
+            padding: 0.9rem 1.5rem;
             display: flex;
             align-items: center;
             gap: 0.75rem;
         }
 
         .chat-header-icon {
-            width: 40px; height: 40px;
-            background: rgba(255,255,255,0.2);
+            width: 38px; height: 38px;
+            background: rgba(255,255,255,0.18);
             border-radius: 10px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 1.25rem;
+            font-size: 1.15rem;
             backdrop-filter: blur(10px);
         }
 
         .chat-header-title {
-            color: #FFF; font-size: 1.05rem; font-weight: 700;
+            color: #FFF; font-size: 0.95rem; font-weight: 700;
             letter-spacing: -0.3px; margin: 0;
         }
 
         .chat-header-sub {
-            color: rgba(255,255,255,0.72); font-size: 0.73rem;
+            color: rgba(255,255,255,0.7); font-size: 0.68rem;
             font-weight: 500; margin: 0.1rem 0 0;
         }
 
         .chat-header-dot {
             margin-left: auto; display: flex; align-items: center;
-            gap: 0.35rem; font-size: 0.7rem; color: rgba(255,255,255,0.8);
+            gap: 0.35rem; font-size: 0.65rem; color: rgba(255,255,255,0.8);
             font-weight: 500;
         }
 
@@ -89,7 +89,6 @@ def _inject_chat_css():
         }
 
         /* ── Scrollable message area (via st.container) ── */
-        /* Style the Streamlit container used as chat area */
         div[data-testid="stVerticalBlockBorderWrapper"]:has(.chat-scroll-marker) {
             border: none !important;
             border-radius: 0 !important;
@@ -103,12 +102,12 @@ def _inject_chat_css():
 
         .user-bubble {
             max-width: 72%;
-            background: linear-gradient(135deg, #4F46E5, #6366F1);
+            background: linear-gradient(135deg, #2563EB, #3B82F6);
             color: #FFF;
             padding: 0.75rem 1.1rem;
-            border-radius: 16px 16px 4px 16px;
-            font-size: 0.86rem; line-height: 1.5; font-weight: 500;
-            box-shadow: 0 2px 8px rgba(79,70,229,0.22);
+            border-radius: 14px 14px 4px 14px;
+            font-size: 0.84rem; line-height: 1.5; font-weight: 500;
+            box-shadow: 0 2px 8px rgba(37,99,235,0.2);
         }
 
         /* ── AI message bubble ────────────────────────── */
@@ -118,25 +117,25 @@ def _inject_chat_css():
         }
 
         .ai-avatar {
-            width: 32px; height: 32px;
-            background: linear-gradient(135deg, #4F46E5, #7C3AED);
-            border-radius: 9px;
+            width: 30px; height: 30px;
+            background: linear-gradient(135deg, #2563EB, #7C3AED);
+            border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
-            font-size: 0.95rem; flex-shrink: 0; margin-top: 2px;
+            font-size: 0.85rem; flex-shrink: 0; margin-top: 2px;
         }
 
         .ai-bubble {
             max-width: 82%;
             background: #FFFFFF;
-            border: 1px solid #E2E8F0;
+            border: 1px solid #E5E7EB;
             padding: 0.85rem 1.1rem;
-            border-radius: 4px 16px 16px 16px;
-            font-size: 0.85rem; line-height: 1.65;
-            color: #1E293B;
-            box-shadow: 0 1px 4px rgba(0,0,0,0.04);
+            border-radius: 4px 14px 14px 14px;
+            font-size: 0.83rem; line-height: 1.65;
+            color: #111827;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.03);
         }
 
-        .ai-bubble strong, .ai-bubble b { color: #4F46E5; }
+        .ai-bubble strong, .ai-bubble b { color: #2563EB; }
         .ai-bubble p { margin: 0.25rem 0; }
         .ai-bubble ul, .ai-bubble ol { padding-left: 1.2rem; margin: 0.25rem 0; }
         .ai-bubble li { margin-bottom: 0.2rem; }
@@ -149,30 +148,30 @@ def _inject_chat_css():
         .welcome-panel .wi { font-size: 2.5rem; margin-bottom: 0.5rem; }
 
         .welcome-panel .wt {
-            font-size: 1.05rem; font-weight: 700; color: #1E293B;
+            font-size: 1rem; font-weight: 700; color: #111827;
             margin-bottom: 0.3rem;
         }
 
         .welcome-panel .ws {
-            font-size: 0.8rem; color: #64748B; max-width: 400px;
+            font-size: 0.78rem; color: #6B7280; max-width: 400px;
             margin: 0 auto 1rem; line-height: 1.45;
         }
 
         .welcome-panel .wl {
-            font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 1.2px; color: #94A3B8; margin-bottom: 0.6rem;
+            font-size: 0.6rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 1.2px; color: #9CA3AF; margin-bottom: 0.6rem;
         }
 
         /* ── Detail cards ─────────────────────────────── */
         .detail-card {
-            background: #F8FAFC; border: 1px solid #E2E8F0;
-            border-radius: 10px; padding: 0.7rem 0.9rem;
+            background: #F9FAFB; border: 1px solid #E5E7EB;
+            border-radius: 8px; padding: 0.6rem 0.9rem;
             margin: 0.45rem 0;
         }
 
         .detail-card-label {
-            font-size: 0.65rem; font-weight: 700; text-transform: uppercase;
-            letter-spacing: 0.8px; color: #94A3B8; margin-bottom: 0.3rem;
+            font-size: 0.62rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: 0.8px; color: #9CA3AF; margin-bottom: 0.3rem;
         }
     </style>
     """, unsafe_allow_html=True)
@@ -194,28 +193,26 @@ def _render_chart(df: pd.DataFrame, chart_info: dict):
     if x not in df.columns or y not in df.columns:
         return
 
-    color_seq = [
-        PALETTE["primary"], PALETTE["accent"], PALETTE["secondary"],
-        PALETTE["warning"], PALETTE["info"],
-    ]
-
     try:
         if chart_type == "bar":
-            fig = px.bar(df, x=x, y=y, color_discrete_sequence=color_seq, template=PLOTLY_TEMPLATE)
+            fig = px.bar(df, x=x, y=y, color_discrete_sequence=CHART_COLORS, template=PLOTLY_TEMPLATE)
         elif chart_type == "line":
-            fig = px.line(df, x=x, y=y, color_discrete_sequence=color_seq, template=PLOTLY_TEMPLATE, markers=True)
+            fig = px.line(df, x=x, y=y, color_discrete_sequence=CHART_COLORS, template=PLOTLY_TEMPLATE, markers=True)
         elif chart_type == "pie":
-            fig = px.pie(df, names=x, values=y, color_discrete_sequence=color_seq, template=PLOTLY_TEMPLATE, hole=0.4)
+            fig = px.pie(df, names=x, values=y, color_discrete_sequence=CHART_COLORS, template=PLOTLY_TEMPLATE, hole=0.45)
         elif chart_type == "histogram":
-            fig = px.histogram(df, x=x, color_discrete_sequence=color_seq, template=PLOTLY_TEMPLATE)
+            fig = px.histogram(df, x=x, color_discrete_sequence=CHART_COLORS, template=PLOTLY_TEMPLATE)
         else:
-            fig = px.bar(df, x=x, y=y, color_discrete_sequence=color_seq, template=PLOTLY_TEMPLATE)
+            fig = px.bar(df, x=x, y=y, color_discrete_sequence=CHART_COLORS, template=PLOTLY_TEMPLATE)
 
         fig.update_layout(
             margin=dict(t=30, b=30, l=30, r=30),
             height=280,
-            font=dict(family="Inter"),
+            font=dict(family="Inter, sans-serif", size=11),
             plot_bgcolor="rgba(0,0,0,0)",
+            paper_bgcolor="rgba(0,0,0,0)",
+            xaxis=dict(gridcolor="#F3F4F6"),
+            yaxis=dict(gridcolor="#F3F4F6"),
         )
         if chart_type == "bar":
             fig.update_traces(marker_cornerradius=6)
