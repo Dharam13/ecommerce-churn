@@ -17,6 +17,7 @@ from personas import (
     render_product_dashboard,
     render_risk_overview,
     render_simulation_dashboard,
+    render_ai_insights,
 )
 
 
@@ -181,6 +182,9 @@ def main():
     if persona != "Simulation Lab":
         st.markdown("---")
         render_risk_overview(df)
+
+    st.markdown("---")
+    render_ai_insights()
 
     st.markdown(f"""
     <div style="
