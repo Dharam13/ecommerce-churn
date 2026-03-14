@@ -10,3 +10,4 @@ apache-airflow
 matplotlib
 seaborn
 python-dotenv
+openpyxl
