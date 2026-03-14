@@ -16,6 +16,7 @@ from personas import (
     render_support_dashboard,
     render_product_dashboard,
     render_risk_overview,
+    render_simulation_dashboard,
     render_ai_insights,
 )
 
@@ -118,7 +119,7 @@ def _render_sidebar() -> str:
 
         persona = st.selectbox(
             "Persona",
-            ["Marketing Manager", "Customer Success / Support", "Product Team"],
+            ["Marketing Manager", "Customer Success / Support", "Product Team", "Simulation Lab"],
             key="persona_selector",
         )
 
@@ -172,11 +173,15 @@ def main():
         render_marketing_dashboard(df)
     elif persona == "Customer Success / Support":
         render_support_dashboard(df)
+    elif persona == "Simulation Lab":
+        render_simulation_dashboard(df)
     else:
         render_product_dashboard(df)
 
-    st.markdown("---")
-    render_risk_overview(df)
+    # Show risk overview for analytics personas only
+    if persona != "Simulation Lab":
+        st.markdown("---")
+        render_risk_overview(df)
 
     st.markdown("---")
     render_ai_insights()
