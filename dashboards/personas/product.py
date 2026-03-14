@@ -3,10 +3,6 @@ personas/product.py
 ═══════════════════
 Persona 3 — Product Team
 Goal: Understand product usage and engagement.
-
-Uses:
-  Gold dim: preferredlogindevice, preferedordercat
-  Silver:   hourspendonapp, numberofdeviceregistered, preferredpaymentmode
 """
 
 import pandas as pd
@@ -14,26 +10,17 @@ import streamlit as st
 import plotly.express as px
 
 from config import PALETTE, PLOTLY_TEMPLATE
-from components import kpi_card, section_header
+from components import kpi_card, section_header, persona_header
 
 
 def render_product_dashboard(df: pd.DataFrame):
     """Render the Product Team persona view."""
 
-    # ── Header ───────────────────────────────────────────────
-    st.markdown(f"""
-    <div style="
-        background: linear-gradient(90deg, rgba(0,208,132,0.25), transparent);
-        padding: 1.2rem 1.5rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
-    ">
-        <h1 style="margin:0;font-size:1.8rem;">🧪  Product Team Dashboard</h1>
-        <p style="color:#9CA3AF;margin:0.3rem 0 0;">
-            Understand product usage, engagement &amp; device preferences
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    persona_header(
+        title="Product Team Dashboard",
+        subtitle="Understand product usage, engagement & device preferences",
+        accent_color=PALETTE["accent"],
+    )
 
     # ── KPIs ─────────────────────────────────────────────────
     avg_app = (
@@ -59,15 +46,19 @@ def render_product_dashboard(df: pd.DataFrame):
 
     cols = st.columns(4)
     with cols[0]:
-        kpi_card("Avg. App Usage (hrs)", f"{avg_app:.1f}", icon="📱")
+        kpi_card("Avg. App Usage (hrs)", f"{avg_app:.1f}",
+                 accent_color=PALETTE["info"])
     with cols[1]:
-        kpi_card("Avg. Devices", f"{avg_devices:.1f}", icon="💻")
+        kpi_card("Avg. Devices", f"{avg_devices:.1f}",
+                 accent_color=PALETTE["primary"])
     with cols[2]:
-        kpi_card("Top Login Device", top_login, icon="🔑")
+        kpi_card("Top Login Device", top_login,
+                 accent_color=PALETTE["accent"])
     with cols[3]:
-        kpi_card("Top Category", top_cat, icon="📦")
+        kpi_card("Top Category", top_cat,
+                 accent_color=PALETTE["warning"])
 
-    section_header("📊  Charts", "Product engagement & usage patterns")
+    section_header("Charts", "Product engagement & usage patterns")
 
     # ── Row 1 ────────────────────────────────────────────────
     c1, c2 = st.columns(2)
@@ -79,12 +70,19 @@ def render_product_dashboard(df: pd.DataFrame):
             fig = px.pie(
                 login_df, names="device", values="count",
                 title="Login Device Distribution",
-                hole=0.45,
+                hole=0.48,
                 template=PLOTLY_TEMPLATE,
-                color_discrete_sequence=px.colors.qualitative.Set2,
+                color_discrete_sequence=[
+                    PALETTE["primary"], PALETTE["accent"], PALETTE["info"],
+                    PALETTE["warning"], PALETTE["secondary"],
+                ],
             )
-            fig.update_traces(textinfo="percent+label")
-            fig.update_layout(margin=dict(t=50, b=20, l=20, r=20), height=380)
+            fig.update_traces(textinfo="percent+label", textfont_size=12)
+            fig.update_layout(
+                margin=dict(t=50, b=20, l=20, r=20), height=380,
+                font=dict(family="Inter"),
+                title_font=dict(size=15, color=PALETTE["text"]),
+            )
             st.plotly_chart(fig, use_container_width=True)
 
     with c2:
@@ -104,7 +102,10 @@ def render_product_dashboard(df: pd.DataFrame):
             fig.update_layout(
                 margin=dict(t=50, b=20, l=20, r=20), height=380,
                 xaxis_title="Devices Registered", yaxis_title="Churn Rate",
+                font=dict(family="Inter"),
+                title_font=dict(size=15, color=PALETTE["text"]),
             )
+            fig.update_traces(marker_cornerradius=6)
             st.plotly_chart(fig, use_container_width=True)
 
     # ── Row 2 ────────────────────────────────────────────────
@@ -122,7 +123,10 @@ def render_product_dashboard(df: pd.DataFrame):
                 margin=dict(t=50, b=20, l=20, r=20), height=380,
                 xaxis_title="Hours", yaxis_title="Count",
                 bargap=0.05,
+                font=dict(family="Inter"),
+                title_font=dict(size=15, color=PALETTE["text"]),
             )
+            fig.update_traces(marker_cornerradius=4)
             st.plotly_chart(fig, use_container_width=True)
 
     with c4:
@@ -138,20 +142,30 @@ def render_product_dashboard(df: pd.DataFrame):
             fig.update_layout(
                 margin=dict(t=50, b=20, l=20, r=20), height=380,
                 xaxis_title="", yaxis_title="Count",
+                font=dict(family="Inter"),
+                title_font=dict(size=15, color=PALETTE["text"]),
             )
+            fig.update_traces(marker_cornerradius=6)
             st.plotly_chart(fig, use_container_width=True)
 
-    # ── Row 3: Payment Mode Pie ──────────────────────────────
+    # ── Row 3 ────────────────────────────────────────────────
     if "preferredpaymentmode" in df.columns:
         pay_df = df["preferredpaymentmode"].value_counts().reset_index()
         pay_df.columns = ["mode", "count"]
         fig = px.pie(
             pay_df, names="mode", values="count",
             title="Payment Mode Distribution",
-            hole=0.45,
+            hole=0.48,
             template=PLOTLY_TEMPLATE,
-            color_discrete_sequence=px.colors.qualitative.Pastel,
+            color_discrete_sequence=[
+                PALETTE["primary"], PALETTE["info"], PALETTE["accent"],
+                PALETTE["warning"], PALETTE["secondary"],
+            ],
         )
-        fig.update_traces(textinfo="percent+label")
-        fig.update_layout(margin=dict(t=50, b=20, l=20, r=20), height=400)
+        fig.update_traces(textinfo="percent+label", textfont_size=12)
+        fig.update_layout(
+            margin=dict(t=50, b=20, l=20, r=20), height=400,
+            font=dict(family="Inter"),
+            title_font=dict(size=15, color=PALETTE["text"]),
+        )
         st.plotly_chart(fig, use_container_width=True)

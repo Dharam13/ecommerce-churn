@@ -22,6 +22,7 @@ import warnings
 from datetime import datetime
 from pathlib import Path
 
+import json
 import joblib
 import numpy as np
 import pandas as pd
@@ -29,6 +30,15 @@ from sklearn.ensemble import RandomForestClassifier
 from sklearn.impute import SimpleImputer, KNNImputer
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder, MinMaxScaler
+from sklearn.metrics import (
+    accuracy_score,
+    precision_score,
+    recall_score,
+    f1_score,
+    roc_auc_score,
+    confusion_matrix,
+    classification_report,
+)
 from sqlalchemy import text
 
 warnings.filterwarnings("ignore")
@@ -44,6 +54,9 @@ from src.db.connection import get_engine, ensure_schemas
 MODEL_DIR = _PROJECT_ROOT / "models"
 MODEL_DIR.mkdir(exist_ok=True)
 MODEL_PATH = MODEL_DIR / "churn_rf_model.pkl"
+
+REPORTS_DIR = _PROJECT_ROOT / "reports"
+REPORTS_DIR.mkdir(exist_ok=True)
 
 # ── Schema names from env ─────────────────────────────────
 SILVER_SCHEMA = os.getenv("SILVER_SCHEMA", "silver")
@@ -154,19 +167,23 @@ def prepare_features(df: pd.DataFrame) -> tuple:
 # 3. TRAIN MODEL
 # ════════════════════════════════════════════════════════════
 
-def train_model(X: pd.DataFrame, y: pd.Series) -> tuple:
+def train_model(X: pd.DataFrame, y: pd.Series, feature_cols: list) -> tuple:
     """
     Train a Random Forest classifier with class-imbalance handling.
-    Returns (model, scaler).
+    Returns (model, scaler, metrics_dict).
     """
+    resampled = False
+    original_size = len(X)
+
     # ── Handle class imbalance ───────────────────────────────
     try:
         from imblearn.combine import SMOTETomek
         smt = SMOTETomek(random_state=42)
         X_res, y_res = smt.fit_resample(X, y)
-        print(f"  ⚖️  SMOTETomek resampling: {len(X)} → {len(X_res)} rows")
+        resampled = True
+        print(f"  SMOTETomek resampling: {len(X)} -> {len(X_res)} rows")
     except ImportError:
-        print("  ⚠️  imbalanced-learn not installed, skipping SMOTETomek")
+        print("  imbalanced-learn not installed, skipping SMOTETomek")
         X_res, y_res = X, y
 
     # ── Train/test split ─────────────────────────────────────
@@ -188,12 +205,440 @@ def train_model(X: pd.DataFrame, y: pd.Series) -> tuple:
     )
     model.fit(X_train_scaled, y_train)
 
-    train_acc = model.score(X_train_scaled, y_train)
-    test_acc = model.score(X_test_scaled, y_test)
-    print(f"  🎯  Train accuracy: {train_acc:.4f}")
-    print(f"  🎯  Test  accuracy: {test_acc:.4f}")
+    # ── Evaluate ─────────────────────────────────────────────
+    metrics = evaluate_model(
+        model, scaler, X_train, X_test, y_train, y_test,
+        feature_cols, original_size, len(X_res), resampled,
+    )
 
-    return model, scaler
+    print(f"  Train accuracy : {metrics['train_accuracy']:.4f}")
+    print(f"  Test  accuracy : {metrics['test_accuracy']:.4f}")
+    print(f"  Precision      : {metrics['precision']:.4f}")
+    print(f"  Recall         : {metrics['recall']:.4f}")
+    print(f"  F1-Score       : {metrics['f1_score']:.4f}")
+    print(f"  ROC-AUC        : {metrics['roc_auc']:.4f}")
+
+    return model, scaler, metrics
+
+
+def _get_eval_data(model, scaler, X_train, X_test, y_train, y_test):
+    """Compute predictions needed for plots and metrics."""
+    X_train_scaled = scaler.transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    return {
+        "y_train": y_train,
+        "y_test": y_test,
+        "y_train_pred": model.predict(X_train_scaled),
+        "y_test_pred": model.predict(X_test_scaled),
+        "y_test_proba": model.predict_proba(X_test_scaled)[:, 1],
+    }
+
+
+def evaluate_model(
+    model, scaler,
+    X_train, X_test, y_train, y_test,
+    feature_cols, original_size, resampled_size, resampled,
+) -> dict:
+    """
+    Compute all evaluation metrics for the trained model.
+    Returns a comprehensive metrics dictionary.
+    """
+    X_train_scaled = scaler.transform(X_train)
+    X_test_scaled = scaler.transform(X_test)
+
+    y_train_pred = model.predict(X_train_scaled)
+    y_test_pred = model.predict(X_test_scaled)
+    y_test_proba = model.predict_proba(X_test_scaled)[:, 1]
+
+    # Confusion matrix
+    cm = confusion_matrix(y_test, y_test_pred)
+    tn, fp, fn, tp = cm.ravel()
+
+    # Feature importance
+    importances = model.feature_importances_
+    feat_imp = sorted(
+        zip(feature_cols, importances.tolist()),
+        key=lambda x: x[1],
+        reverse=True,
+    )
+
+    # Classification report (as dict)
+    cls_report = classification_report(y_test, y_test_pred, output_dict=True)
+
+    metrics = {
+        # ── Dataset info ──────────────────────────────
+        "dataset": {
+            "original_rows": original_size,
+            "resampled_rows": resampled_size,
+            "resampling_applied": resampled,
+            "resampling_method": "SMOTETomek" if resampled else "None",
+            "test_size": 0.30,
+            "train_rows": len(X_train),
+            "test_rows": len(X_test),
+        },
+        # ── Model config ─────────────────────────────
+        "model": {
+            "algorithm": "RandomForestClassifier",
+            "n_estimators": 100,
+            "max_depth": 15,
+            "random_state": 42,
+            "scaler": "MinMaxScaler",
+            "n_features": len(feature_cols),
+            "features": feature_cols,
+        },
+        # ── Core metrics ─────────────────────────────
+        "train_accuracy": round(accuracy_score(y_train, y_train_pred), 4),
+        "test_accuracy": round(accuracy_score(y_test, y_test_pred), 4),
+        "precision": round(precision_score(y_test, y_test_pred), 4),
+        "recall": round(recall_score(y_test, y_test_pred), 4),
+        "f1_score": round(f1_score(y_test, y_test_pred), 4),
+        "roc_auc": round(roc_auc_score(y_test, y_test_proba), 4),
+        # ── Confusion matrix ────────────────────────
+        "confusion_matrix": {
+            "true_negatives": int(tn),
+            "false_positives": int(fp),
+            "false_negatives": int(fn),
+            "true_positives": int(tp),
+        },
+        # ── Per-class report ────────────────────────
+        "classification_report": cls_report,
+        # ── Feature importance (sorted desc) ────────
+        "feature_importance": [
+            {"feature": name, "importance": round(imp, 4)}
+            for name, imp in feat_imp
+        ],
+        # ── Timestamps ──────────────────────────────
+        "trained_at": datetime.now().isoformat(),
+    }
+
+    return metrics
+
+
+def save_evaluation_report(metrics: dict, eval_data: dict = None) -> tuple:
+    """
+    Save evaluation metrics to:
+      - reports/model_evaluation.json  (machine-readable)
+      - reports/model_evaluation.md    (human-readable, for evaluator)
+      - reports/*.png                  (plots embedded in the report)
+    Returns (json_path, md_path).
+    """
+    json_path = REPORTS_DIR / "model_evaluation.json"
+    md_path = REPORTS_DIR / "model_evaluation.md"
+
+    # ── JSON ──────────────────────────────────────────────────
+    with open(json_path, "w") as f:
+        json.dump(metrics, f, indent=2, default=str)
+
+    # ── Generate plots ────────────────────────────────────────
+    plot_paths = {}
+    if eval_data is not None:
+        plot_paths = generate_evaluation_plots(metrics, eval_data)
+
+    # ── Markdown report ───────────────────────────────────────
+    cm = metrics["confusion_matrix"]
+    ds = metrics["dataset"]
+    model_info = metrics["model"]
+    feat_imp = metrics["feature_importance"]
+    cls_rpt = metrics["classification_report"]
+
+    lines = [
+        "# Churn Prediction Model — Evaluation Report",
+        "",
+        f"**Generated:** {metrics['trained_at']}",
+        "",
+        "---",
+        "",
+        "## 1. Model Configuration",
+        "",
+        "| Parameter | Value |",
+        "|---|---|",
+        f"| Algorithm | {model_info['algorithm']} |",
+        f"| Number of Estimators | {model_info['n_estimators']} |",
+        f"| Max Depth | {model_info['max_depth']} |",
+        f"| Feature Scaler | {model_info['scaler']} |",
+        f"| Number of Features | {model_info['n_features']} |",
+        f"| Random State | {model_info['random_state']} |",
+        "",
+        "## 2. Dataset Summary",
+        "",
+        "| Parameter | Value |",
+        "|---|---|",
+        f"| Original Rows | {ds['original_rows']:,} |",
+        f"| Resampling | {ds['resampling_method']} |",
+        f"| Resampled Rows | {ds['resampled_rows']:,} |",
+        f"| Train Rows | {ds['train_rows']:,} |",
+        f"| Test Rows | {ds['test_rows']:,} |",
+        f"| Test Size | {ds['test_size'] * 100:.0f}% |",
+        "",
+        "## 3. Performance Metrics",
+        "",
+        "| Metric | Score |",
+        "|---|---|",
+        f"| **Train Accuracy** | {metrics['train_accuracy']:.4f} |",
+        f"| **Test Accuracy** | {metrics['test_accuracy']:.4f} |",
+        f"| **Precision** | {metrics['precision']:.4f} |",
+        f"| **Recall** | {metrics['recall']:.4f} |",
+        f"| **F1-Score** | {metrics['f1_score']:.4f} |",
+        f"| **ROC-AUC** | {metrics['roc_auc']:.4f} |",
+        "",
+    ]
+
+    # Embed metrics bar chart if generated
+    if "metrics_bar" in plot_paths:
+        lines += [
+            f"![Performance Metrics]({plot_paths['metrics_bar'].name})",
+            "",
+        ]
+
+    lines += [
+        "## 4. Confusion Matrix",
+        "",
+        "|  | Predicted: Stay | Predicted: Churn |",
+        "|---|---|---|",
+        f"| **Actual: Stay** | {cm['true_negatives']:,} (TN) | {cm['false_positives']:,} (FP) |",
+        f"| **Actual: Churn** | {cm['false_negatives']:,} (FN) | {cm['true_positives']:,} (TP) |",
+        "",
+        f"- **True Positives (correctly predicted churn):** {cm['true_positives']:,}",
+        f"- **True Negatives (correctly predicted stay):** {cm['true_negatives']:,}",
+        f"- **False Positives (incorrectly predicted churn):** {cm['false_positives']:,}",
+        f"- **False Negatives (missed churn):** {cm['false_negatives']:,}",
+        "",
+    ]
+
+    # Embed confusion matrix plot
+    if "confusion_matrix" in plot_paths:
+        lines += [
+            f"![Confusion Matrix Heatmap]({plot_paths['confusion_matrix'].name})",
+            "",
+        ]
+
+    lines += [
+        "## 5. ROC Curve",
+        "",
+        f"AUC Score: **{metrics['roc_auc']:.4f}**",
+        "",
+    ]
+
+    if "roc_curve" in plot_paths:
+        lines += [
+            f"![ROC Curve]({plot_paths['roc_curve'].name})",
+            "",
+        ]
+
+    lines += [
+        "## 6. Classification Report",
+        "",
+        "| Class | Precision | Recall | F1-Score | Support |",
+        "|---|---|---|---|---|",
+    ]
+
+    for cls_key in ["0", "1"]:
+        if cls_key in cls_rpt:
+            c = cls_rpt[cls_key]
+            label = "Stay (0)" if cls_key == "0" else "Churn (1)"
+            lines.append(
+                f"| {label} | {c['precision']:.4f} | {c['recall']:.4f} "
+                f"| {c['f1-score']:.4f} | {int(c['support']):,} |"
+            )
+
+    if "macro avg" in cls_rpt:
+        m = cls_rpt["macro avg"]
+        lines.append(
+            f"| **Macro Avg** | {m['precision']:.4f} | {m['recall']:.4f} "
+            f"| {m['f1-score']:.4f} | {int(m['support']):,} |"
+        )
+
+    if "weighted avg" in cls_rpt:
+        w = cls_rpt["weighted avg"]
+        lines.append(
+            f"| **Weighted Avg** | {w['precision']:.4f} | {w['recall']:.4f} "
+            f"| {w['f1-score']:.4f} | {int(w['support']):,} |"
+        )
+
+    lines += [
+        "",
+        "## 7. Feature Importance",
+        "",
+    ]
+
+    if "feature_importance" in plot_paths:
+        lines += [
+            f"![Feature Importance]({plot_paths['feature_importance'].name})",
+            "",
+        ]
+
+    lines += [
+        "| Rank | Feature | Importance |",
+        "|---|---|---|",
+    ]
+    for i, fi in enumerate(feat_imp[:10], 1):
+        bar = "\u2588" * int(fi["importance"] * 40)
+        lines.append(f"| {i} | {fi['feature']} | {fi['importance']:.4f} {bar} |")
+
+    lines += [
+        "",
+        "## 8. All Features Used",
+        "",
+        "```",
+        ", ".join(model_info["features"]),
+        "```",
+        "",
+        "---",
+        "",
+        "*Report generated by `src.ml.predict_churn` pipeline.*",
+        "",
+    ]
+
+    with open(md_path, "w", encoding="utf-8") as f:
+        f.write("\n".join(lines))
+
+    print(f"  Evaluation JSON  : {json_path}")
+    print(f"  Evaluation Report: {md_path}")
+    if plot_paths:
+        print(f"  Plots saved      : {len(plot_paths)} images in {REPORTS_DIR}")
+
+    return json_path, md_path
+
+
+def generate_evaluation_plots(metrics: dict, eval_data: dict) -> dict:
+    """
+    Generate evaluation plots and save as PNG files.
+    Returns dict of {name: Path} for each generated plot.
+    """
+    import matplotlib
+    matplotlib.use("Agg")  # non-interactive backend
+    import matplotlib.pyplot as plt
+    import matplotlib.ticker as ticker
+    from sklearn.metrics import roc_curve as sk_roc_curve
+
+    plot_paths = {}
+    colors = ["#4F46E5", "#10B981", "#F43F5E", "#F59E0B", "#06B6D4"]
+
+    y_test = eval_data["y_test"]
+    y_test_pred = eval_data["y_test_pred"]
+    y_test_proba = eval_data["y_test_proba"]
+    feat_imp = metrics["feature_importance"]
+    cm = metrics["confusion_matrix"]
+
+    # ── 1. Confusion Matrix Heatmap ──────────────────────────
+    fig, ax = plt.subplots(figsize=(7, 5.5))
+    cm_array = np.array([
+        [cm["true_negatives"], cm["false_positives"]],
+        [cm["false_negatives"], cm["true_positives"]],
+    ])
+    im = ax.imshow(cm_array, cmap="Blues", aspect="auto")
+    plt.colorbar(im, ax=ax, shrink=0.8)
+
+    labels = ["Stay (0)", "Churn (1)"]
+    ax.set_xticks([0, 1])
+    ax.set_yticks([0, 1])
+    ax.set_xticklabels(labels, fontsize=11)
+    ax.set_yticklabels(labels, fontsize=11)
+    ax.set_xlabel("Predicted Label", fontsize=12, fontweight="bold")
+    ax.set_ylabel("Actual Label", fontsize=12, fontweight="bold")
+    ax.set_title("Confusion Matrix", fontsize=14, fontweight="bold", pad=15)
+
+    # Annotate cells
+    for i in range(2):
+        for j in range(2):
+            val = cm_array[i, j]
+            text_color = "white" if val > cm_array.max() / 2 else "black"
+            label_map = [["TN", "FP"], ["FN", "TP"]]
+            ax.text(j, i, f"{val:,}\n({label_map[i][j]})",
+                    ha="center", va="center", fontsize=14,
+                    fontweight="bold", color=text_color)
+
+    fig.tight_layout()
+    path = REPORTS_DIR / "confusion_matrix.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    plot_paths["confusion_matrix"] = path
+
+    # ── 2. ROC Curve ─────────────────────────────────────────
+    fpr, tpr, _ = sk_roc_curve(y_test, y_test_proba)
+    auc_val = metrics["roc_auc"]
+
+    fig, ax = plt.subplots(figsize=(7, 5.5))
+    ax.plot(fpr, tpr, color=colors[0], lw=2.5,
+            label=f"ROC Curve (AUC = {auc_val:.4f})")
+    ax.plot([0, 1], [0, 1], color="#94A3B8", lw=1.5, linestyle="--",
+            label="Random Classifier")
+    ax.fill_between(fpr, tpr, alpha=0.12, color=colors[0])
+    ax.set_xlabel("False Positive Rate", fontsize=12, fontweight="bold")
+    ax.set_ylabel("True Positive Rate", fontsize=12, fontweight="bold")
+    ax.set_title("ROC Curve", fontsize=14, fontweight="bold", pad=15)
+    ax.legend(loc="lower right", fontsize=10)
+    ax.set_xlim([0, 1])
+    ax.set_ylim([0, 1.02])
+    ax.grid(True, alpha=0.3)
+
+    fig.tight_layout()
+    path = REPORTS_DIR / "roc_curve.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    plot_paths["roc_curve"] = path
+
+    # ── 3. Feature Importance Bar Chart ───────────────────────
+    top_n = min(15, len(feat_imp))
+    top_features = feat_imp[:top_n]
+    names = [f["feature"] for f in reversed(top_features)]
+    values = [f["importance"] for f in reversed(top_features)]
+
+    fig, ax = plt.subplots(figsize=(8, max(5, top_n * 0.4)))
+    bars = ax.barh(names, values, color=colors[0], edgecolor="white", height=0.6)
+
+    # Value labels on bars
+    for bar, val in zip(bars, values):
+        ax.text(bar.get_width() + 0.003, bar.get_y() + bar.get_height() / 2,
+                f"{val:.4f}", va="center", fontsize=9, color="#475569")
+
+    ax.set_xlabel("Importance", fontsize=12, fontweight="bold")
+    ax.set_title("Feature Importance (Random Forest)", fontsize=14,
+                 fontweight="bold", pad=15)
+    ax.grid(True, axis="x", alpha=0.3)
+    ax.set_xlim(0, max(values) * 1.15)
+
+    fig.tight_layout()
+    path = REPORTS_DIR / "feature_importance.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    plot_paths["feature_importance"] = path
+
+    # ── 4. Metrics Comparison Bar Chart ───────────────────────
+    metric_names = ["Accuracy\n(Train)", "Accuracy\n(Test)", "Precision",
+                    "Recall", "F1-Score", "ROC-AUC"]
+    metric_vals = [
+        metrics["train_accuracy"], metrics["test_accuracy"],
+        metrics["precision"], metrics["recall"],
+        metrics["f1_score"], metrics["roc_auc"],
+    ]
+    bar_colors = [colors[4], colors[0], colors[1], colors[3], colors[2], colors[0]]
+
+    fig, ax = plt.subplots(figsize=(9, 5))
+    bars = ax.bar(metric_names, metric_vals, color=bar_colors,
+                  edgecolor="white", width=0.55)
+
+    for bar, val in zip(bars, metric_vals):
+        ax.text(bar.get_x() + bar.get_width() / 2, bar.get_height() + 0.008,
+                f"{val:.4f}", ha="center", va="bottom", fontsize=10,
+                fontweight="bold", color="#1E293B")
+
+    ax.set_ylim(0, 1.08)
+    ax.set_ylabel("Score", fontsize=12, fontweight="bold")
+    ax.set_title("Model Performance Metrics", fontsize=14,
+                 fontweight="bold", pad=15)
+    ax.grid(True, axis="y", alpha=0.3)
+    ax.axhline(y=0.5, color="#CBD5E1", linestyle="--", lw=1)
+
+    fig.tight_layout()
+    path = REPORTS_DIR / "metrics_bar.png"
+    fig.savefig(path, dpi=150, bbox_inches="tight", facecolor="white")
+    plt.close(fig)
+    plot_paths["metrics_bar"] = path
+
+    print(f"  Generated {len(plot_paths)} evaluation plots")
+    return plot_paths
 
 
 # ════════════════════════════════════════════════════════════
@@ -363,8 +808,20 @@ def run_pipeline(retrain: bool = True) -> None:
 
         # ── 3. Train or load model ───────────────────────────
         if retrain or not MODEL_PATH.exists():
-            print("\n🏋️  Step 3: Training Random Forest model...")
-            model, scaler = train_model(X, y)
+            print("\n  Step 3: Training Random Forest model...")
+            model, scaler, metrics = train_model(X, y, feature_cols)
+
+            # Get eval data for plots
+            try:
+                from imblearn.combine import SMOTETomek
+                smt = SMOTETomek(random_state=42)
+                X_res, y_res = smt.fit_resample(X, y)
+            except ImportError:
+                X_res, y_res = X, y
+            X_train, X_test, y_train, y_test = train_test_split(
+                X_res, y_res, test_size=0.30, random_state=42
+            )
+            eval_data = _get_eval_data(model, scaler, X_train, X_test, y_train, y_test)
 
             # Save model + metadata
             joblib.dump(
@@ -376,7 +833,11 @@ def run_pipeline(retrain: bool = True) -> None:
                 },
                 MODEL_PATH,
             )
-            print(f"  💾  Model saved to {MODEL_PATH}")
+            print(f"  Model saved to {MODEL_PATH}")
+
+            # Save evaluation report with plots
+            print("\n  Step 3b: Saving evaluation report...")
+            save_evaluation_report(metrics, eval_data)
         else:
             print("\n📂  Step 3: Loading saved model...")
             saved = joblib.load(MODEL_PATH)

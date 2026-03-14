@@ -141,12 +141,12 @@ def load_data() -> pd.DataFrame:
             df.loc[mask, "churn_probability"] = _fallback_probability(df.loc[mask])
             df.loc[mask, "risk_segment"] = df.loc[mask, "churn_probability"].apply(_compute_segment)
 
-        st.sidebar.success("🤖 Using ML model predictions", icon="✅")
+        st.sidebar.success("Using ML model predictions")
     else:
         # Fallback: rule-based if no ML predictions exist yet
         df["churn_probability"] = _fallback_probability(df)
         df["risk_segment"] = df["churn_probability"].apply(_compute_segment)
-        st.sidebar.warning("⚠️ No ML predictions found. Using rule-based fallback.\n\nRun: `python -m src.ml.predict_churn`", icon="⚠️")
+        st.sidebar.warning("No ML predictions found — using rule-based fallback.\n\nRun: `python -m src.ml.predict_churn`")
 
     return df
 

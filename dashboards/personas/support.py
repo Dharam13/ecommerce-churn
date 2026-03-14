@@ -3,10 +3,6 @@ personas/support.py
 ═══════════════════
 Persona 2 — Customer Success / Support
 Goal: Monitor complaints and satisfaction.
-
-Uses:
-  Gold fact:  complain, churn
-  Silver:     satisfactionscore, daysincelastorder
 """
 
 import pandas as pd
@@ -14,26 +10,17 @@ import streamlit as st
 import plotly.express as px
 
 from config import PALETTE, PLOTLY_TEMPLATE
-from components import kpi_card, section_header, styled_dataframe
+from components import kpi_card, section_header, styled_dataframe, persona_header
 
 
 def render_support_dashboard(df: pd.DataFrame):
     """Render the Customer Success / Support persona view."""
 
-    # ── Header ───────────────────────────────────────────────
-    st.markdown(f"""
-    <div style="
-        background: linear-gradient(90deg, rgba(255,101,132,0.25), transparent);
-        padding: 1.2rem 1.5rem;
-        border-radius: 12px;
-        margin-bottom: 1.5rem;
-    ">
-        <h1 style="margin:0;font-size:1.8rem;">🛟  Customer Success / Support</h1>
-        <p style="color:#9CA3AF;margin:0.3rem 0 0;">
-            Monitor complaints, satisfaction &amp; customer inactivity
-        </p>
-    </div>
-    """, unsafe_allow_html=True)
+    persona_header(
+        title="Customer Success / Support",
+        subtitle="Monitor complaints, satisfaction & customer inactivity",
+        accent_color=PALETTE["secondary"],
+    )
 
     # ── KPIs ─────────────────────────────────────────────────
     total = len(df)
@@ -48,15 +35,19 @@ def render_support_dashboard(df: pd.DataFrame):
 
     cols = st.columns(4)
     with cols[0]:
-        kpi_card("Complaint Rate", f"{complaint_rate:.1f}%", icon="📢")
+        kpi_card("Complaint Rate", f"{complaint_rate:.1f}%",
+                 accent_color=PALETTE["secondary"])
     with cols[1]:
-        kpi_card("Avg. Satisfaction", f"{avg_sat:.2f} / 5", icon="⭐")
+        kpi_card("Avg. Satisfaction", f"{avg_sat:.2f} / 5",
+                 accent_color=PALETTE["warning"])
     with cols[2]:
-        kpi_card("Complaint Customers", f"{complaint_count:,}", icon="😤")
+        kpi_card("Complaint Customers", f"{complaint_count:,}",
+                 accent_color=PALETTE["secondary"])
     with cols[3]:
-        kpi_card("Inactive (>30 days)", f"{inactive:,}", icon="💤")
+        kpi_card("Inactive (>30 days)", f"{inactive:,}",
+                 accent_color=PALETTE["text_muted"])
 
-    section_header("📊  Charts", "Complaint & satisfaction analysis")
+    section_header("Charts", "Complaint & satisfaction analysis")
 
     # ── Row 1 ────────────────────────────────────────────────
     c1, c2 = st.columns(2)
@@ -85,7 +76,10 @@ def render_support_dashboard(df: pd.DataFrame):
             margin=dict(t=50, b=20, l=20, r=20), height=380,
             showlegend=False,
             xaxis_title="", yaxis_title="Churn Rate",
+            font=dict(family="Inter"),
+            title_font=dict(size=15, color=PALETTE["text"]),
         )
+        fig.update_traces(marker_cornerradius=6)
         st.plotly_chart(fig, use_container_width=True)
 
     with c2:
@@ -99,8 +93,11 @@ def render_support_dashboard(df: pd.DataFrame):
             fig.update_layout(
                 margin=dict(t=50, b=20, l=20, r=20), height=380,
                 xaxis_title="Satisfaction Score", yaxis_title="Count",
-                bargap=0.1,
+                bargap=0.15,
+                font=dict(family="Inter"),
+                title_font=dict(size=15, color=PALETTE["text"]),
             )
+            fig.update_traces(marker_cornerradius=6)
             st.plotly_chart(fig, use_container_width=True)
 
     # ── Row 2 ────────────────────────────────────────────────
@@ -124,6 +121,8 @@ def render_support_dashboard(df: pd.DataFrame):
                 margin=dict(t=50, b=20, l=20, r=20), height=380,
                 showlegend=False,
                 xaxis_title="", yaxis_title="Satisfaction Score",
+                font=dict(family="Inter"),
+                title_font=dict(size=15, color=PALETTE["text"]),
             )
             st.plotly_chart(fig, use_container_width=True)
 
@@ -139,11 +138,14 @@ def render_support_dashboard(df: pd.DataFrame):
                 margin=dict(t=50, b=20, l=20, r=20), height=380,
                 xaxis_title="Days Since Last Order", yaxis_title="Count",
                 bargap=0.05,
+                font=dict(family="Inter"),
+                title_font=dict(size=15, color=PALETTE["text"]),
             )
+            fig.update_traces(marker_cornerradius=4)
             st.plotly_chart(fig, use_container_width=True)
 
     # ── Complaint Customers Table ────────────────────────────
-    section_header("📋  Complaint Customers", "Customers who filed complaints")
+    section_header("Complaint Customers", "Customers who filed complaints")
     comp_cols = [
         "customerid", "complain", "satisfactionscore",
         "daysincelastorder", "churn_probability",

@@ -8,26 +8,28 @@ import pandas as pd
 import streamlit as st
 import plotly.express as px
 
-from config import RISK_COLORS, PLOTLY_TEMPLATE
+from config import PALETTE, RISK_COLORS, PLOTLY_TEMPLATE
 from components import kpi_card, section_header, styled_dataframe
 
 
 def render_risk_overview(df: pd.DataFrame):
     """Render a risk-segmentation breakdown with KPIs, chart, and table."""
-    section_header("🎯  Churn Risk Segmentation Overview")
+    section_header("Churn Risk Segmentation Overview",
+                   "Distribution of customers across risk levels")
 
     seg_counts = df["risk_segment"].value_counts().reindex(
         ["High Risk", "Medium Risk", "Low Risk"], fill_value=0
     )
 
-    # ── KPI cards ────────────────────────────────────────────
     cols = st.columns(3)
-    icons = ["🔴", "🟠", "🟢"]
-    for i, seg in enumerate(["High Risk", "Medium Risk", "Low Risk"]):
+    segments = ["High Risk", "Medium Risk", "Low Risk"]
+    for i, seg in enumerate(segments):
         with cols[i]:
-            kpi_card(seg, f"{seg_counts[seg]:,}", icon=icons[i])
+            kpi_card(seg, f"{seg_counts[seg]:,}",
+                     accent_color=RISK_COLORS[seg])
 
-    # ── Horizontal stacked bar ───────────────────────────────
+    st.markdown("<div style='height:0.75rem;'></div>", unsafe_allow_html=True)
+
     seg_df = seg_counts.reset_index()
     seg_df.columns = ["segment", "count"]
     fig = px.bar(
@@ -43,15 +45,19 @@ def render_risk_overview(df: pd.DataFrame):
     fig.update_layout(
         barmode="stack",
         margin=dict(t=50, b=20, l=20, r=20),
-        height=180,
+        height=160,
         showlegend=True,
         yaxis_title="",
         xaxis_title="Customer Count",
+        font=dict(family="Inter"),
+        title_font=dict(size=15, color=PALETTE["text"]),
+        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
     )
+    fig.update_traces(marker_cornerradius=4)
     st.plotly_chart(fig, use_container_width=True)
 
-    # ── High Risk table ──────────────────────────────────────
-    section_header("🚨  High Risk Customer List")
+    section_header("High Risk Customer List",
+                   "Customers most likely to churn — prioritize outreach")
     high_risk_cols = [
         "customerid", "churn_probability", "risk_segment",
         "ordercount", "couponused", "cashbackamount",
