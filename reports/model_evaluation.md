@@ -1,6 +1,6 @@
 # Churn Prediction Model — Evaluation Report
 
-**Generated:** 2026-03-14T21:09:21.190156
+**Generated:** 2026-03-14T21:44:12.750230
 
 ---
 
@@ -20,22 +20,22 @@
 | Parameter | Value |
 |---|---|
 | Original Rows | 5,630 |
-| Resampling | SMOTETomek |
-| Resampled Rows | 9,362 |
-| Train Rows | 6,553 |
-| Test Rows | 2,809 |
+| Resampling | None |
+| Resampled Rows | 5,630 |
+| Train Rows | 3,941 |
+| Test Rows | 1,689 |
 | Test Size | 30% |
 
 ## 3. Performance Metrics
 
 | Metric | Score |
 |---|---|
-| **Train Accuracy** | 0.9997 |
-| **Test Accuracy** | 0.9758 |
-| **Precision** | 0.9637 |
-| **Recall** | 0.9885 |
-| **F1-Score** | 0.9759 |
-| **ROC-AUC** | 0.9973 |
+| **Train Accuracy** | 1.0000 |
+| **Test Accuracy** | 0.9621 |
+| **Precision** | 0.9465 |
+| **Recall** | 0.8185 |
+| **F1-Score** | 0.8779 |
+| **ROC-AUC** | 0.9848 |
 
 ![Performance Metrics](metrics_bar.png)
 
@@ -43,19 +43,19 @@
 
 |  | Predicted: Stay | Predicted: Churn |
 |---|---|---|
-| **Actual: Stay** | 1,362 (TN) | 52 (FP) |
-| **Actual: Churn** | 16 (FN) | 1,379 (TP) |
+| **Actual: Stay** | 1,395 (TN) | 13 (FP) |
+| **Actual: Churn** | 51 (FN) | 230 (TP) |
 
-- **True Positives (correctly predicted churn):** 1,379
-- **True Negatives (correctly predicted stay):** 1,362
-- **False Positives (incorrectly predicted churn):** 52
-- **False Negatives (missed churn):** 16
+- **True Positives (correctly predicted churn):** 230
+- **True Negatives (correctly predicted stay):** 1,395
+- **False Positives (incorrectly predicted churn):** 13
+- **False Negatives (missed churn):** 51
 
 ![Confusion Matrix Heatmap](confusion_matrix.png)
 
 ## 5. ROC Curve
 
-AUC Score: **0.9973**
+AUC Score: **0.9848**
 
 ![ROC Curve](roc_curve.png)
 
@@ -63,10 +63,10 @@ AUC Score: **0.9973**
 
 | Class | Precision | Recall | F1-Score | Support |
 |---|---|---|---|---|
-| Stay (0) | 0.9884 | 0.9632 | 0.9756 | 1,414 |
-| Churn (1) | 0.9637 | 0.9885 | 0.9759 | 1,395 |
-| **Macro Avg** | 0.9760 | 0.9759 | 0.9758 | 2,809 |
-| **Weighted Avg** | 0.9761 | 0.9758 | 0.9758 | 2,809 |
+| Stay (0) | 0.9647 | 0.9908 | 0.9776 | 1,408 |
+| Churn (1) | 0.9465 | 0.8185 | 0.8779 | 281 |
+| **Macro Avg** | 0.9556 | 0.9046 | 0.9277 | 1,689 |
+| **Weighted Avg** | 0.9617 | 0.9621 | 0.9610 | 1,689 |
 
 ## 7. Feature Importance
 
@@ -74,16 +74,16 @@ AUC Score: **0.9973**
 
 | Rank | Feature | Importance |
 |---|---|---|
-| 1 | tenure | 0.2846 ███████████ |
-| 2 | cashbackamount | 0.1033 ████ |
-| 3 | daysincelastorder | 0.0860 ███ |
-| 4 | warehousetohome | 0.0669 ██ |
-| 5 | orderamounthikefromlastyear | 0.0537 ██ |
-| 6 | hourspendonapp | 0.0523 ██ |
-| 7 | couponused | 0.0510 ██ |
-| 8 | numberofaddress | 0.0433 █ |
-| 9 | ordercount | 0.0420 █ |
-| 10 | preferedordercat_encoded | 0.0347 █ |
+| 1 | tenure | 0.2271 █████████ |
+| 2 | cashbackamount | 0.1016 ████ |
+| 3 | warehousetohome | 0.0784 ███ |
+| 4 | daysincelastorder | 0.0654 ██ |
+| 5 | numberofaddress | 0.0649 ██ |
+| 6 | complain | 0.0610 ██ |
+| 7 | orderamounthikefromlastyear | 0.0608 ██ |
+| 8 | satisfactionscore | 0.0480 █ |
+| 9 | preferredpaymentmode_encoded | 0.0410 █ |
+| 10 | maritalstatus_encoded | 0.0390 █ |
 
 ## 8. All Features Used
 

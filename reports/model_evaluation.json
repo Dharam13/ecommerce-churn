@@ -1,12 +1,12 @@
 {
   "dataset": {
     "original_rows": 5630,
-    "resampled_rows": 9362,
-    "resampling_applied": true,
-    "resampling_method": "SMOTETomek",
+    "resampled_rows": 5630,
+    "resampling_applied": false,
+    "resampling_method": "None",
     "test_size": 0.3,
-    "train_rows": 6553,
-    "test_rows": 2809
+    "train_rows": 3941,
+    "test_rows": 1689
   },
   "model": {
     "algorithm": "RandomForestClassifier",
@@ -36,118 +36,118 @@
       "preferredpaymentmode_encoded"
     ]
   },
-  "train_accuracy": 0.9997,
-  "test_accuracy": 0.9758,
-  "precision": 0.9637,
-  "recall": 0.9885,
-  "f1_score": 0.9759,
-  "roc_auc": 0.9973,
+  "train_accuracy": 1.0,
+  "test_accuracy": 0.9621,
+  "precision": 0.9465,
+  "recall": 0.8185,
+  "f1_score": 0.8779,
+  "roc_auc": 0.9848,
   "confusion_matrix": {
-    "true_negatives": 1362,
-    "false_positives": 52,
-    "false_negatives": 16,
-    "true_positives": 1379
+    "true_negatives": 1395,
+    "false_positives": 13,
+    "false_negatives": 51,
+    "true_positives": 230
   },
   "classification_report": {
     "0": {
-      "precision": 0.988388969521045,
-      "recall": 0.9632248939179632,
-      "f1-score": 0.9756446991404012,
-      "support": 1414.0
+      "precision": 0.9647302904564315,
+      "recall": 0.9907670454545454,
+      "f1-score": 0.9775753328661527,
+      "support": 1408.0
     },
     "1": {
-      "precision": 0.9636617749825297,
-      "recall": 0.9885304659498207,
-      "f1-score": 0.9759377211606511,
-      "support": 1395.0
+      "precision": 0.9465020576131687,
+      "recall": 0.8185053380782918,
+      "f1-score": 0.8778625954198473,
+      "support": 281.0
     },
-    "accuracy": 0.9757920968316127,
+    "accuracy": 0.9621077560686797,
     "macro avg": {
-      "precision": 0.9760253722517873,
-      "recall": 0.975877679933892,
-      "f1-score": 0.9757912101505262,
-      "support": 2809.0
+      "precision": 0.9556161740348001,
+      "recall": 0.9046361917664186,
+      "f1-score": 0.927718964143,
+      "support": 1689.0
     },
     "weighted avg": {
-      "precision": 0.9761089992892086,
-      "recall": 0.9757920968316127,
-      "f1-score": 0.9757902191540178,
-      "support": 2809.0
+      "precision": 0.9616976478105128,
+      "recall": 0.9621077560686797,
+      "f1-score": 0.9609860615680995,
+      "support": 1689.0
     }
   },
   "feature_importance": [
     {
       "feature": "tenure",
-      "importance": 0.2846
+      "importance": 0.2271
     },
     {
       "feature": "cashbackamount",
-      "importance": 0.1033
-    },
-    {
-      "feature": "daysincelastorder",
-      "importance": 0.086
+      "importance": 0.1016
     },
     {
       "feature": "warehousetohome",
-      "importance": 0.0669
+      "importance": 0.0784
     },
     {
-      "feature": "orderamounthikefromlastyear",
-      "importance": 0.0537
-    },
-    {
-      "feature": "hourspendonapp",
-      "importance": 0.0523
-    },
-    {
-      "feature": "couponused",
-      "importance": 0.051
+      "feature": "daysincelastorder",
+      "importance": 0.0654
     },
     {
       "feature": "numberofaddress",
-      "importance": 0.0433
-    },
-    {
-      "feature": "ordercount",
-      "importance": 0.042
-    },
-    {
-      "feature": "preferedordercat_encoded",
-      "importance": 0.0347
-    },
-    {
-      "feature": "satisfactionscore",
-      "importance": 0.0337
-    },
-    {
-      "feature": "preferredpaymentmode_encoded",
-      "importance": 0.0305
+      "importance": 0.0649
     },
     {
       "feature": "complain",
-      "importance": 0.0254
+      "importance": 0.061
     },
     {
-      "feature": "citytier",
-      "importance": 0.0206
+      "feature": "orderamounthikefromlastyear",
+      "importance": 0.0608
     },
     {
-      "feature": "preferredlogindevice_encoded",
-      "importance": 0.0204
+      "feature": "satisfactionscore",
+      "importance": 0.048
     },
     {
-      "feature": "numberofdeviceregistered",
-      "importance": 0.0196
+      "feature": "preferredpaymentmode_encoded",
+      "importance": 0.041
     },
     {
       "feature": "maritalstatus_encoded",
-      "importance": 0.0177
+      "importance": 0.039
+    },
+    {
+      "feature": "numberofdeviceregistered",
+      "importance": 0.0357
+    },
+    {
+      "feature": "preferedordercat_encoded",
+      "importance": 0.0345
+    },
+    {
+      "feature": "couponused",
+      "importance": 0.0283
+    },
+    {
+      "feature": "citytier",
+      "importance": 0.0267
+    },
+    {
+      "feature": "ordercount",
+      "importance": 0.0258
+    },
+    {
+      "feature": "preferredlogindevice_encoded",
+      "importance": 0.0253
+    },
+    {
+      "feature": "hourspendonapp",
+      "importance": 0.0187
     },
     {
       "feature": "gender_encoded",
-      "importance": 0.0142
+      "importance": 0.0178
     }
   ],
-  "trained_at": "2026-03-14T21:09:21.190156"
+  "trained_at": "2026-03-14T21:44:12.750230"
 }

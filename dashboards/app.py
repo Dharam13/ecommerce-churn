@@ -16,6 +16,7 @@ from personas import (
     render_support_dashboard,
     render_product_dashboard,
     render_risk_overview,
+    render_ai_insights,
 )
 
 
@@ -176,6 +177,9 @@ def main():
 
     st.markdown("---")
     render_risk_overview(df)
+
+    st.markdown("---")
+    render_ai_insights()
 
     st.markdown(f"""
     <div style="
