@@ -1,6 +1,6 @@
 """
-dashboards/risk_overview.py
-═══════════════════════════
+personas/risk_overview.py
+═════════════════════════
 Shared risk-segmentation section shown at the bottom of every persona.
 """
 
@@ -53,12 +53,13 @@ def render_risk_overview(df: pd.DataFrame):
     # ── High Risk table ──────────────────────────────────────
     section_header("🚨  High Risk Customer List")
     high_risk_cols = [
-        "customer_id", "churn_probability", "risk_segment",
-        "order_count", "coupon_used", "cashback_amount",
-        "day_since_last_order", "satisfaction_score", "complain",
+        "customerid", "churn_probability", "risk_segment",
+        "ordercount", "couponused", "cashbackamount",
+        "daysincelastorder", "satisfactionscore", "complain",
     ]
+    avail_cols = [c for c in high_risk_cols if c in df.columns]
     hr_df = (
-        df[df["risk_segment"] == "High Risk"][high_risk_cols]
+        df[df["risk_segment"] == "High Risk"][avail_cols]
         .sort_values("churn_probability", ascending=False)
         .reset_index(drop=True)
     )

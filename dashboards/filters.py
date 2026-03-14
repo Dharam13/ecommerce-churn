@@ -12,7 +12,7 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
     """Render sidebar filters and return the filtered DataFrame."""
 
     # ── City Tier ────────────────────────────────────────────
-    tiers = sorted(df["city_tier"].dropna().unique())
+    tiers = sorted(df["citytier"].dropna().unique())
     sel_tiers = st.sidebar.multiselect(
         "🏙️  City Tier", tiers, default=tiers, key="filter_city_tier"
     )
@@ -24,14 +24,14 @@ def apply_filters(df: pd.DataFrame) -> pd.DataFrame:
     )
 
     # ── Login Device ─────────────────────────────────────────
-    devices = sorted(df["preferred_login_device"].dropna().unique())
+    devices = sorted(df["preferredlogindevice"].dropna().unique())
     sel_devices = st.sidebar.multiselect(
         "📱  Login Device", devices, default=devices, key="filter_device"
     )
 
     mask = (
-        df["city_tier"].isin(sel_tiers)
+        df["citytier"].isin(sel_tiers)
         & df["gender"].isin(sel_genders)
-        & df["preferred_login_device"].isin(sel_devices)
+        & df["preferredlogindevice"].isin(sel_devices)
     )
     return df[mask].copy()

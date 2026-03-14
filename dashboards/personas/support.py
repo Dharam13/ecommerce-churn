@@ -1,8 +1,12 @@
 """
-dashboards/support.py
-═════════════════════
+personas/support.py
+═══════════════════
 Persona 2 — Customer Success / Support
 Goal: Monitor complaints and satisfaction.
+
+Uses:
+  Gold fact:  complain, churn
+  Silver:     satisfactionscore, daysincelastorder
 """
 
 import pandas as pd
@@ -35,8 +39,12 @@ def render_support_dashboard(df: pd.DataFrame):
     total = len(df)
     complaint_count = df["complain"].sum()
     complaint_rate = complaint_count / total * 100 if total else 0
-    avg_sat = df["satisfaction_score"].mean()
-    inactive = (df["day_since_last_order"] > 30).sum()
+    avg_sat = df["satisfactionscore"].mean() if "satisfactionscore" in df.columns else 0
+    inactive = (
+        (df["daysincelastorder"] > 30).sum()
+        if "daysincelastorder" in df.columns
+        else 0
+    )
 
     cols = st.columns(4)
     with cols[0]:
@@ -50,7 +58,7 @@ def render_support_dashboard(df: pd.DataFrame):
 
     section_header("📊  Charts", "Complaint & satisfaction analysis")
 
-    # ── Chart Row 1 ──────────────────────────────────────────
+    # ── Row 1 ────────────────────────────────────────────────
     c1, c2 = st.columns(2)
 
     with c1:
@@ -81,64 +89,68 @@ def render_support_dashboard(df: pd.DataFrame):
         st.plotly_chart(fig, use_container_width=True)
 
     with c2:
-        fig = px.histogram(
-            df, x="satisfaction_score", nbins=5,
-            title="Satisfaction Score Distribution",
-            template=PLOTLY_TEMPLATE,
-            color_discrete_sequence=[PALETTE["info"]],
-        )
-        fig.update_layout(
-            margin=dict(t=50, b=20, l=20, r=20), height=380,
-            xaxis_title="Satisfaction Score", yaxis_title="Count",
-            bargap=0.1,
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        if "satisfactionscore" in df.columns:
+            fig = px.histogram(
+                df, x="satisfactionscore", nbins=5,
+                title="Satisfaction Score Distribution",
+                template=PLOTLY_TEMPLATE,
+                color_discrete_sequence=[PALETTE["info"]],
+            )
+            fig.update_layout(
+                margin=dict(t=50, b=20, l=20, r=20), height=380,
+                xaxis_title="Satisfaction Score", yaxis_title="Count",
+                bargap=0.1,
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
-    # ── Chart Row 2 ──────────────────────────────────────────
+    # ── Row 2 ────────────────────────────────────────────────
     c3, c4 = st.columns(2)
 
     with c3:
-        box_df = df.copy()
-        box_df["churn_label"] = box_df["churn"].map({0: "Retained", 1: "Churned"})
-        fig = px.box(
-            box_df, x="churn_label", y="satisfaction_score",
-            color="churn_label",
-            color_discrete_map={
-                "Retained": PALETTE["accent"],
-                "Churned": PALETTE["secondary"],
-            },
-            title="Satisfaction vs Churn",
-            template=PLOTLY_TEMPLATE,
-        )
-        fig.update_layout(
-            margin=dict(t=50, b=20, l=20, r=20), height=380,
-            showlegend=False,
-            xaxis_title="", yaxis_title="Satisfaction Score",
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        if "satisfactionscore" in df.columns:
+            box_df = df.copy()
+            box_df["churn_label"] = box_df["churn"].map({0: "Retained", 1: "Churned"})
+            fig = px.box(
+                box_df, x="churn_label", y="satisfactionscore",
+                color="churn_label",
+                color_discrete_map={
+                    "Retained": PALETTE["accent"],
+                    "Churned": PALETTE["secondary"],
+                },
+                title="Satisfaction vs Churn",
+                template=PLOTLY_TEMPLATE,
+            )
+            fig.update_layout(
+                margin=dict(t=50, b=20, l=20, r=20), height=380,
+                showlegend=False,
+                xaxis_title="", yaxis_title="Satisfaction Score",
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
     with c4:
-        fig = px.histogram(
-            df, x="day_since_last_order", nbins=30,
-            title="Days Since Last Order",
-            template=PLOTLY_TEMPLATE,
-            color_discrete_sequence=[PALETTE["warning"]],
-        )
-        fig.update_layout(
-            margin=dict(t=50, b=20, l=20, r=20), height=380,
-            xaxis_title="Days Since Last Order", yaxis_title="Count",
-            bargap=0.05,
-        )
-        st.plotly_chart(fig, use_container_width=True)
+        if "daysincelastorder" in df.columns:
+            fig = px.histogram(
+                df, x="daysincelastorder", nbins=30,
+                title="Days Since Last Order",
+                template=PLOTLY_TEMPLATE,
+                color_discrete_sequence=[PALETTE["warning"]],
+            )
+            fig.update_layout(
+                margin=dict(t=50, b=20, l=20, r=20), height=380,
+                xaxis_title="Days Since Last Order", yaxis_title="Count",
+                bargap=0.05,
+            )
+            st.plotly_chart(fig, use_container_width=True)
 
     # ── Complaint Customers Table ────────────────────────────
     section_header("📋  Complaint Customers", "Customers who filed complaints")
     comp_cols = [
-        "customer_id", "complain", "satisfaction_score",
-        "day_since_last_order", "churn_probability",
+        "customerid", "complain", "satisfactionscore",
+        "daysincelastorder", "churn_probability",
     ]
+    avail_cols = [c for c in comp_cols if c in df.columns]
     comp_df = (
-        df[df["complain"] == 1][comp_cols]
+        df[df["complain"] == 1][avail_cols]
         .sort_values("churn_probability", ascending=False)
         .reset_index(drop=True)
     )

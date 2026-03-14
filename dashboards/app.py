@@ -3,21 +3,25 @@ app.py — ChurnGuard Entry Point
 ════════════════════════════════
 E-Commerce Customer Churn Prediction & Retention Dashboard.
 
-Slim orchestrator that wires together:
-  config      → credentials, palettes, constants
-  database    → connect_db(), load_data()
-  filters     → apply_filters()
-  components  → reusable UI primitives
-  dashboards/ → persona-specific views
+Reads from a PostgreSQL Data Warehouse using a Bronze → Silver → Gold
+star schema.  DB credentials come from the project's .env file.
 
-Run:  streamlit run app.py
+Slim orchestrator that wires together:
+  config       → palettes, thresholds, schema names (from .env)
+  database     → connect_db(), load_data()  (Gold + Silver enrichment)
+  filters      → apply_filters()
+  components   → reusable UI primitives
+  personas/    → persona-specific dashboard views
+
+Run from the dashboards/ directory:
+    streamlit run app.py
 """
 
 import streamlit as st
 from config import PALETTE
 from database import load_data
 from filters import apply_filters
-from dashboards import (
+from personas import (
     render_marketing_dashboard,
     render_support_dashboard,
     render_product_dashboard,
@@ -87,6 +91,9 @@ def _render_sidebar() -> str:
             <p style="color:#9CA3AF;font-size:0.8rem;margin:0;">
                 E-Commerce Retention Intelligence
             </p>
+            <p style="color:#6B7280;font-size:0.65rem;margin:0.3rem 0 0;">
+                Gold Star Schema · PostgreSQL DW
+            </p>
         </div>
         """, unsafe_allow_html=True)
 
@@ -123,7 +130,7 @@ def main():
 
     persona = _render_sidebar()
 
-    # ── Load data ────────────────────────────────────────────
+    # ── Load data from Gold + Silver ─────────────────────────
     try:
         raw_df = load_data()
     except Exception as e:
@@ -131,8 +138,9 @@ def main():
             f"⚠️  **Database Connection Error**\n\n"
             f"Could not connect to PostgreSQL or load data.\n\n"
             f"```\n{e}\n```\n\n"
-            f"Make sure PostgreSQL is running and `churn_db` is set up.\n"
-            f"Run `python setup_database.py` first."
+            f"Make sure PostgreSQL is running and the Gold schema is populated.\n\n"
+            f"1. Check `.env` has the correct `DATABASE_URL`\n"
+            f"2. Run the ETL pipeline: `python -m src.etl.build_gold_schema`"
         )
         st.stop()
 
@@ -158,7 +166,7 @@ def main():
     # ── Footer ───────────────────────────────────────────────
     st.markdown("""
     <div style="text-align:center;padding:2rem 0 1rem;color:#6B7280;font-size:0.75rem;">
-        ChurnGuard v1.0  ·  Powered by Streamlit &amp; PostgreSQL  ·  Built for Hackathon Demo
+        ChurnGuard v2.0  ·  Gold Star Schema  ·  Powered by Streamlit &amp; PostgreSQL
     </div>
     """, unsafe_allow_html=True)
 

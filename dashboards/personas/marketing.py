@@ -1,8 +1,11 @@
 """
-dashboards/marketing.py
-═══════════════════════
+personas/marketing.py
+═════════════════════
 Persona 1 — Marketing Manager
 Goal: Monitor churn and retention campaigns.
+
+Uses Gold star-schema column names:
+  ordercount, couponused, cashbackamount, churn, risk_segment, churn_probability
 """
 
 import pandas as pd
@@ -37,10 +40,10 @@ def render_marketing_dashboard(df: pd.DataFrame):
     churn_rate = churned / total * 100 if total else 0
     at_risk = (df["risk_segment"] == "High Risk").sum()
     retention_rate = 100 - churn_rate
-    avg_orders = df["order_count"].mean()
+    avg_orders = df["ordercount"].mean()
     coupon_eff = (
-        df[df["coupon_used"] > 0]["churn"].mean() * 100
-        if (df["coupon_used"] > 0).any()
+        df[df["couponused"] > 0]["churn"].mean() * 100
+        if (df["couponused"] > 0).any()
         else 0
     )
 
@@ -58,7 +61,7 @@ def render_marketing_dashboard(df: pd.DataFrame):
 
     section_header("📊  Charts", "Churn drivers & retention insights")
 
-    # ── Chart Row 1: Churn Distribution + Orders vs Churn ────
+    # ── Row 1: Churn Distribution + Orders vs Churn ──────────
     c1, c2 = st.columns(2)
 
     with c1:
@@ -84,7 +87,7 @@ def render_marketing_dashboard(df: pd.DataFrame):
         box_df = df.copy()
         box_df["churn_label"] = box_df["churn"].map({0: "Retained", 1: "Churned"})
         fig = px.box(
-            box_df, x="churn_label", y="order_count",
+            box_df, x="churn_label", y="ordercount",
             color="churn_label",
             color_discrete_map={
                 "Retained": PALETTE["accent"],
@@ -100,7 +103,7 @@ def render_marketing_dashboard(df: pd.DataFrame):
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # ── Chart Row 2: Cashback Scatter + Coupon Usage Bar ─────
+    # ── Row 2: Cashback Scatter + Coupon Usage Bar ───────────
     c3, c4 = st.columns(2)
 
     with c3:
@@ -109,7 +112,7 @@ def render_marketing_dashboard(df: pd.DataFrame):
             {0: "Retained", 1: "Churned"}
         )
         fig = px.scatter(
-            scatter_df, x="cashback_amount", y="churn_probability",
+            scatter_df, x="cashbackamount", y="churn_probability",
             color="churn_label",
             color_discrete_map={
                 "Retained": PALETTE["accent"],
@@ -127,13 +130,13 @@ def render_marketing_dashboard(df: pd.DataFrame):
 
     with c4:
         coupon_df = (
-            df.groupby("coupon_used")["churn"]
+            df.groupby("couponused")["churn"]
             .mean()
             .reset_index()
             .rename(columns={"churn": "churn_rate"})
         )
         fig = px.bar(
-            coupon_df, x="coupon_used", y="churn_rate",
+            coupon_df, x="couponused", y="churn_rate",
             title="Coupon Usage vs Churn Rate",
             template=PLOTLY_TEMPLATE,
             color_discrete_sequence=[PALETTE["primary"]],
@@ -144,7 +147,7 @@ def render_marketing_dashboard(df: pd.DataFrame):
         )
         st.plotly_chart(fig, use_container_width=True)
 
-    # ── Chart Row 3: Churn Risk Segmentation ─────────────────
+    # ── Row 3: Churn Risk Segmentation ───────────────────────
     seg_df = df["risk_segment"].value_counts().reset_index()
     seg_df.columns = ["risk_segment", "count"]
     fig = px.bar(
@@ -167,11 +170,12 @@ def render_marketing_dashboard(df: pd.DataFrame):
         "Sorted by churn probability (descending)",
     )
     high_risk_cols = [
-        "customer_id", "churn_probability", "order_count",
-        "coupon_used", "cashback_amount", "day_since_last_order",
+        "customerid", "churn_probability", "ordercount",
+        "couponused", "cashbackamount", "daysincelastorder",
     ]
+    avail_cols = [c for c in high_risk_cols if c in df.columns]
     high_risk_df = (
-        df[df["risk_segment"] == "High Risk"][high_risk_cols]
+        df[df["risk_segment"] == "High Risk"][avail_cols]
         .sort_values("churn_probability", ascending=False)
         .reset_index(drop=True)
     )
