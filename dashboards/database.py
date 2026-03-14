@@ -48,7 +48,6 @@ def _predictions_table_exists(engine) -> bool:
         return False
 
 
-@st.cache_data(ttl=DATA_CACHE_TTL)
 def load_data() -> pd.DataFrame:
     """
     Build a rich analytical DataFrame by joining Gold star-schema tables,

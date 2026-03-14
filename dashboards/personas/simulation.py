@@ -8,6 +8,7 @@ Two modes:
   2. Simulate New User  — add a brand-new customer end-to-end
 """
 
+import os
 import sys
 from pathlib import Path
 
@@ -89,7 +90,7 @@ def render_simulation_dashboard(df: pd.DataFrame):
         accent_color=PALETTE["info"],
     )
 
-    tab1, tab2 = st.tabs(["Simulate Activity", "New Customer"])
+    tab1, tab2, tab3 = st.tabs(["Simulate Activity", "New Customer", "Retention Message"])
 
     # ════════════════════════════════════════════════════════
     # TAB 1: SIMULATE ACTIVITY UPDATE
@@ -291,3 +292,207 @@ def render_simulation_dashboard(df: pd.DataFrame):
                 result.get("prediction"),
                 PALETTE["primary"],
             )
+
+    # ════════════════════════════════════════════════════════
+    # TAB 3: RETENTION MESSAGE (GEMINI AI)
+    # ════════════════════════════════════════════════════════
+    with tab3:
+        section_header(
+            "AI Retention Message Generator",
+            "Select a customer to generate a personalised retention message using Gemini AI. "
+            "High-risk customers receive discount offers, medium-risk get engagement messages.",
+        )
+
+        # Build customer options with risk info
+        cust_risk = df.drop_duplicates("customerid")[["customerid", "risk_segment", "churn_probability"]].copy()
+        cust_risk = cust_risk.sort_values("churn_probability", ascending=False)
+
+        # Customer selector
+        col_sel, col_info = st.columns([3, 2])
+        with col_sel:
+            options = cust_risk["customerid"].tolist()
+            selected_cust = st.selectbox(
+                "Select Customer ID",
+                options=options,
+                key="retention_cust_id",
+            )
+
+        # Show selected customer's risk info
+        if selected_cust:
+            cust_row = cust_risk[cust_risk["customerid"] == selected_cust].iloc[0]
+            risk_seg = cust_row["risk_segment"]
+            churn_prob = cust_row["churn_probability"]
+
+            with col_info:
+                st.markdown("<div style='height:1.7rem;'></div>", unsafe_allow_html=True)
+                badge = _risk_badge(risk_seg)
+                st.markdown(
+                    f"<div style='display:flex;align-items:center;gap:0.75rem;'>"
+                    f"<span style='color:{PALETTE['text_muted']};font-size:0.82rem;'>Churn: <b>{churn_prob*100:.1f}%</b></span>"
+                    f"{badge}</div>",
+                    unsafe_allow_html=True,
+                )
+
+            # Customer profile summary
+            cust_full = df[df["customerid"] == selected_cust].iloc[0]
+            profile_cols = st.columns(5)
+            profile_fields = [
+                ("Tenure", cust_full.get("tenure", "?")),
+                ("Orders", cust_full.get("ordercount", "?")),
+                ("Satisfaction", cust_full.get("satisfactionscore", "?")),
+                ("Complaint", "Yes" if cust_full.get("complain", 0) == 1 else "No"),
+                ("Days Since Order", cust_full.get("daysincelastorder", "?")),
+            ]
+            for col, (label, val) in zip(profile_cols, profile_fields):
+                col.metric(label, val)
+
+            st.markdown("<div style='height:0.5rem;'></div>", unsafe_allow_html=True)
+
+            # Generate button
+            generate_btn = st.button(
+                "Generate Retention Message",
+                key="btn_generate_retention",
+                use_container_width=True,
+                type="primary",
+            )
+
+            if generate_btn:
+                with st.spinner("Generating message with Gemini AI..."):
+                    message = _generate_retention_message(cust_full, risk_seg, churn_prob)
+
+                if message:
+                    # Styled message card
+                    if risk_seg == "High Risk":
+                        border_color = RISK_COLORS["High Risk"]
+                        msg_label = "DISCOUNT OFFER"
+                    elif risk_seg == "Medium Risk":
+                        border_color = RISK_COLORS["Medium Risk"]
+                        msg_label = "RETENTION MESSAGE"
+                    else:
+                        border_color = RISK_COLORS["Low Risk"]
+                        msg_label = "APPRECIATION MESSAGE"
+
+                    st.markdown(f"""
+                    <div style="
+                        background:{PALETTE['card_bg']};
+                        border:1px solid {PALETTE['card_border']};
+                        border-left:5px solid {border_color};
+                        border-radius:12px;
+                        padding:1.5rem 1.75rem;
+                        margin-top:1rem;
+                        box-shadow:0 2px 8px rgba(0,0,0,0.06);
+                    ">
+                        <div style="color:{border_color};font-size:0.68rem;font-weight:700;
+                             text-transform:uppercase;letter-spacing:1.2px;margin-bottom:0.75rem;">
+                            {msg_label}
+                        </div>
+                        <div style="color:{PALETTE['text']};font-size:0.92rem;line-height:1.7;">
+                            {message}
+                        </div>
+                    </div>
+                    """, unsafe_allow_html=True)
+                else:
+                    st.error("Failed to generate message. Check your GEMINI_API_KEY in .env")
+
+
+def _generate_retention_message(customer_data, risk_segment: str, churn_prob: float) -> str:
+    """
+    Use Gemini API to generate a personalised retention message.
+    """
+    from dotenv import load_dotenv
+    load_dotenv(_PROJECT_ROOT / ".env")
+
+    api_key = os.getenv("GEMINI_API_KEY")
+    if not api_key:
+        return None
+
+    # Build customer context
+    tenure = customer_data.get("tenure", "unknown")
+    orders = customer_data.get("ordercount", "unknown")
+    satisfaction = customer_data.get("satisfactionscore", "unknown")
+    complain = "yes" if customer_data.get("complain", 0) == 1 else "no"
+    category = customer_data.get("preferedordercat", "unknown")
+    days_since = customer_data.get("daysincelastorder", "unknown")
+    gender = customer_data.get("gender", "unknown")
+    payment = customer_data.get("preferredpaymentmode", "unknown")
+    cashback = customer_data.get("cashbackamount", "unknown")
+
+    if risk_segment == "High Risk":
+        tone = (
+            "This is a HIGH RISK customer about to churn. "
+            "Write a compelling message offering an exclusive DISCOUNT or special offer "
+            "to win them back. Include a specific percentage discount or cashback offer. "
+            "Be urgent but respectful."
+        )
+    elif risk_segment == "Medium Risk":
+        tone = (
+            "This is a MEDIUM RISK customer showing signs of reduced engagement. "
+            "Write a warm retention message encouraging them to return. "
+            "Suggest products they might like based on their preferences. "
+            "Be friendly and highlight what they're missing."
+        )
+    else:
+        tone = (
+            "This is a LOW RISK loyal customer. "
+            "Write a short appreciation message thanking them for their loyalty. "
+            "Make them feel valued."
+        )
+
+    prompt = f"""
+You are an e-commerce retention marketing specialist. Generate a personalised customer retention
+message based on the following customer profile:
+
+- Customer tenure: {tenure} months
+- Total orders: {orders}
+- Satisfaction score: {satisfaction}/5
+- Has complained: {complain}
+- Preferred category: {category}
+- Days since last order: {days_since}
+- Gender: {gender}
+- Preferred payment: {payment}
+- Cashback amount: {cashback}
+- Churn probability: {churn_prob*100:.1f}%
+- Risk segment: {risk_segment}
+
+{tone}
+
+Keep the message under 150 words. Write it as if you are sending it directly to the customer
+(use "you/your"). Do not include subject line or greeting prefix like "Dear Customer".
+Start directly with the message content.
+"""
+
+    try:
+        from google import genai
+
+        client = genai.Client(api_key=api_key)
+
+        # Same model fallback order as the working chatbot
+        models_to_try = [
+            "gemini-2.5-flash-lite",
+            "gemini-2.5-flash",
+            "gemini-2.0-flash-lite",
+            "gemini-2.0-flash",
+        ]
+        last_error = None
+
+        for model_name in models_to_try:
+            try:
+                response = client.models.generate_content(
+                    model=model_name,
+                    contents=prompt,
+                )
+                return response.text.strip()
+            except Exception as e:
+                last_error = e
+                error_str = str(e).upper()
+                if any(code in error_str for code in [
+                    "RESOURCE_EXHAUSTED", "429", "NOT_FOUND", "404",
+                ]):
+                    continue
+                raise e
+
+        raise last_error
+    except Exception as e:
+        st.error(f"Gemini API error: {e}")
+        return None
+
