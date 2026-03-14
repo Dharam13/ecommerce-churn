@@ -135,6 +135,12 @@ def build_gold_from_silver() -> None:
         silver_df["order_date"] = order_dates
         dim_date = _build_dim_date(order_dates)
 
+        # Drop fact first so dimension table replaces cannot fail on FK dependencies
+        with engine.begin() as conn:
+            conn.execute(
+                text(f"DROP TABLE IF EXISTS {gold_schema}.fact_orders")
+            )
+
         # Write dimensions (replace snapshot)
         with engine.begin() as conn:
             dim_customer.to_sql(
