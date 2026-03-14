@@ -123,3 +123,15 @@ CREATE INDEX IF NOT EXISTS idx_fact_orders_churn
 CREATE INDEX IF NOT EXISTS idx_fact_orders_date_sk
     ON gold.fact_orders (date_sk);
 
+-- Churn predictions (from ML model)
+CREATE TABLE IF NOT EXISTS gold.churn_predictions (
+    customerid          VARCHAR PRIMARY KEY,
+    churn_probability   FLOAT,
+    churn_prediction    INTEGER,
+    risk_segment        VARCHAR(20),
+    prediction_time     TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_churn_pred_risk
+    ON gold.churn_predictions (risk_segment);
+
