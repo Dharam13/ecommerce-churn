@@ -39,8 +39,8 @@ def _inject_css():
         .stApp, [data-testid="stAppViewContainer"] {
             background-color: #F3F4F6;
         }
-        [data-testid="stAppViewContainer"] > section {
-            padding-top: 130px !important;
+        [data-testid="stAppViewContainer"] > section:not([data-testid="stSidebar"]) {
+            padding-top: 140px !important;
         }
         /* Fixed header styles - full width over sidebar */
         .fixed-header {
@@ -58,11 +58,21 @@ def _inject_css():
             background: #FFFFFF;
             border-right: 1px solid #E5E7EB;
             box-shadow: 2px 0 8px rgba(0,0,0,0.03);
-            padding-top: 130px !important;
-            margin-top: 0 !important;
+            padding-top: 75px !important;
         }
         [data-testid="stSidebar"] > div:first-child {
-            padding-top: 130px !important;
+            padding-left: 1rem !important;
+            padding-right: 1rem !important;
+        }
+        [data-testid="stSidebar"] [data-testid="stVerticalBlock"] {
+            gap: 0.5rem !important;
+        }
+        [data-testid="stSidebar"] .stSelectbox,
+        [data-testid="stSidebar"] .stMultiSelect {
+            margin-bottom: 0.5rem !important;
+        }
+        [data-testid="stSidebar"] hr {
+            margin: 1rem 0 !important;
         }
         [data-testid="stSidebar"] [data-testid="stMarkdownContainer"] p {
             color: #6B7280;
@@ -227,17 +237,17 @@ def _render_topbar(persona: str):
         '</div>'
     )
 
-    topbar_html = (
-        '<div class="fixed-header">'
-        '<div style="padding:0 1.5rem;">'
-        '<div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;">'
-        f'{brand_html}'
-        f'{badge_html}'
-        '</div>'
-        f'<div style="display:flex;gap:0;border-top:1px solid #F3F4F6;">{tabs_html}</div>'
-        '</div>'
-        '</div>'
-    )
+    topbar_html = f"""
+    <div class="fixed-header">
+        <div style="padding:0 1.5rem;">
+            <div style="display:flex;align-items:center;justify-content:space-between;padding:0.75rem 0;">
+                {brand_html}
+                {badge_html}
+            </div>
+            <div style="display:flex;gap:0;border-top:1px solid #F3F4F6;">{tabs_html}</div>
+        </div>
+    </div>
+    """
 
     st.markdown(topbar_html, unsafe_allow_html=True)
 
@@ -288,6 +298,7 @@ def main():
 
     _inject_css()
 
+    # Render header first (before sidebar)
     persona = _render_sidebar()
 
     try:
@@ -326,10 +337,6 @@ def main():
         st.markdown("---")
         render_risk_overview(df)
 
-    st.markdown("---")
-    st.markdown('<div id="ai-insights-anchor"></div>', unsafe_allow_html=True)
-    render_ai_insights()
-
     # Footer
     st.markdown(
         '<div style="text-align:center;padding:2rem 0 1.25rem;color:#9CA3AF;font-size:0.68rem;font-weight:500;letter-spacing:0.3px;">'
@@ -340,6 +347,10 @@ def main():
         '</div>',
         unsafe_allow_html=True,
     )
+
+    # AI Insights chatbot — exclude from Simulation Lab
+    if persona != "Simulation Lab":
+        render_ai_insights()
 
 
 if __name__ == "__main__":

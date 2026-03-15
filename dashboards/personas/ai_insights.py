@@ -45,7 +45,7 @@ def _inject_chat_css():
 
         /* ── Header bar ────────────────────────────────── */
         .chat-header {
-            background: linear-gradient(135deg, #2563EB, #7C3AED);
+            background: #2563EB;
             padding: 0.9rem 1.5rem;
             display: flex;
             align-items: center;
@@ -102,7 +102,7 @@ def _inject_chat_css():
 
         .user-bubble {
             max-width: 72%;
-            background: linear-gradient(135deg, #2563EB, #3B82F6);
+            background: #2563EB;
             color: #FFF;
             padding: 0.75rem 1.1rem;
             border-radius: 14px 14px 4px 14px;
@@ -118,7 +118,7 @@ def _inject_chat_css():
 
         .ai-avatar {
             width: 30px; height: 30px;
-            background: linear-gradient(135deg, #2563EB, #7C3AED);
+            background: #2563EB;
             border-radius: 8px;
             display: flex; align-items: center; justify-content: center;
             font-size: 0.85rem; flex-shrink: 0; margin-top: 2px;
