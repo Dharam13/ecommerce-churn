@@ -1,0 +1,44 @@
+# ── Version control ──────────────────────────────────────
+.git
+.gitignore
+
+# ── Virtual environments ─────────────────────────────────
+venv/
+.venv/
+env/
+
+# ── Python cache ─────────────────────────────────────────
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+
+# ── IDEs ─────────────────────────────────────────────────
+.vscode/
+.idea/
+
+# ── Local databases / logs ───────────────────────────────
+*.db
+*.log
+
+# ── Notebooks (not needed in container) ──────────────────
+notebooks/
+
+# ── Reports (generated outputs) ──────────────────────────
+reports/
+
+# ── Secrets ──────────────────────────────────────────────
+.env
+
+# ── Docker ───────────────────────────────────────────────
+docker-compose.override.yml
+
+# ── OS files ─────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+
+# ── Node ─────────────────────────────────────────────────
+node_modules/
+
+# ── Tests (optional — uncomment to exclude) ──────────────
+# tests/

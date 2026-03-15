@@ -1,0 +1,48 @@
+services:
+  db:
+    image: postgres:16-alpine
+    container_name: ecommerce_churn_db
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ${POSTGRES_DB:-ecommerce_churn}
+      POSTGRES_USER: ${POSTGRES_USER:-postgres}
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:-postgres}
+    ports:
+      - "5432:5432"
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+      - ../src/db/schema_init.sql:/docker-entrypoint-initdb.d/01_schema_init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ${POSTGRES_USER:-postgres} -d ${POSTGRES_DB:-ecommerce_churn}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  app:
+    build:
+      context: ..
+      dockerfile: docker/Dockerfile.app
+    container_name: ecommerce_churn_app
+    restart: unless-stopped
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - ../.env
+    environment:
+      DATABASE_URL: ${DATABASE_URL:-postgresql+psycopg2://postgres:postgres@db:5432/ecommerce_churn}
+      BRONZE_SCHEMA: ${BRONZE_SCHEMA:-bronze}
+      SILVER_SCHEMA: ${SILVER_SCHEMA:-silver}
+      GOLD_SCHEMA: ${GOLD_SCHEMA:-gold}
+      RUN_BOOTSTRAP: ${RUN_BOOTSTRAP:-true}
+      ENABLE_AUTO_SIMULATION: ${ENABLE_AUTO_SIMULATION:-false}
+      AUTO_SIMULATION_INTERVAL_SEC: ${AUTO_SIMULATION_INTERVAL_SEC:-30}
+      AUTO_SIMULATION_MODE: ${AUTO_SIMULATION_MODE:-new}
+      STREAMLIT_SERVER_HEADLESS: "true"
+    ports:
+      - "8501:8501"
+    volumes:
+      - ../data:/app/data
+
+volumes:
+  postgres_data:

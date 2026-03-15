@@ -1,0 +1,16 @@
+numpy
+pandas
+SQLAlchemy
+psycopg2-binary
+scikit-learn
+imbalanced-learn
+joblib
+xgboost
+mlflow
+streamlit
+matplotlib
+seaborn
+python-dotenv
+openpyxl
+plotly
+google-genai
