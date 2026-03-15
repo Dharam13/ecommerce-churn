@@ -39,19 +39,27 @@ def render_risk_overview(df: pd.DataFrame):
         color="segment",
         color_discrete_map=RISK_COLORS,
         orientation="h",
-        title="Risk Distribution",
         template=PLOTLY_TEMPLATE,
     )
     fig.update_layout(
         barmode="stack",
-        margin=dict(t=50, b=20, l=20, r=20),
+        margin=dict(t=45, b=20, l=20, r=20),
         height=160,
         showlegend=True,
         yaxis_title="",
         xaxis_title="Customer Count",
-        font=dict(family="Inter"),
-        title_font=dict(size=15, color=PALETTE["text"]),
-        legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+        font=dict(family="Inter, sans-serif", size=12, color=PALETTE["text_secondary"]),
+        title=dict(
+            text="Risk Distribution",
+            font=dict(size=14, color=PALETTE["text"], family="Inter"),
+            x=0.02, y=0.95,
+        ),
+        plot_bgcolor="rgba(0,0,0,0)",
+        paper_bgcolor="rgba(0,0,0,0)",
+        legend=dict(
+            orientation="h", yanchor="bottom", y=1.02,
+            xanchor="right", x=1, font=dict(size=11),
+        ),
     )
     fig.update_traces(marker_cornerradius=4)
     st.plotly_chart(fig, use_container_width=True)
